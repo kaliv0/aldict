@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "alter-ago"
+version = "0.1.0"
+readme = "README.md"
+authors = ["kaliv0 <kaloyan.ivanov88@gmail.com>"]
+description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
+keywords = ["multi-key dictionary", "multidict", "alias-dict"]
+repository = "https://github.com/kaliv0/alter-ego"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+ruff = "^0.8.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
