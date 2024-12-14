@@ -1,20 +1,27 @@
-[tool.poetry]
-name = "alter-ago"
-version = "0.1.0"
+[build-system]
+requires = ["setuptools>=75.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alterpy"
+version = "1.0.0"
 readme = "README.md"
-authors = ["kaliv0 <kaloyan.ivanov88@gmail.com>"]
+authors = [{ name = "Kaloyan Ivanov", email = "kaloyan.ivanov88@gmail.com" }]
 description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
 keywords = ["multi-key dictionary", "multidict", "alias-dict"]
-repository = "https://github.com/kaliv0/alter-ego"
+urls = { repository = "https://github.com/kaliv0/alterpy" }
 
-[tool.poetry.dependencies]
-python = "^3.11"
+requires-python = ">= 3.11"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.4",
+    "ruff>=0.8.3",
+    "build>=1.2.2",
+    "twine>=6.0.1",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-ruff = "^0.8.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["alterpy"]
+exclude = ["tests"]

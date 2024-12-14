@@ -1,6 +1,6 @@
 import pytest
 
-from alter_ego.alias_dict import AliasDict
+from alterpy.alias_dict import AliasDict
 
 
 @pytest.fixture()

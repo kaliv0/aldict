@@ -1,7 +1,7 @@
 import pytest
 
-from alter_ego.alias_dict import AliasDict
-from alter_ego.exception import AliasValueError, AliasError
+from alterpy import AliasDict
+from alterpy import AliasValueError, AliasError
 
 
 def test_alias_dict(alias_dict):
