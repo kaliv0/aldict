@@ -1,6 +1,6 @@
 from collections import UserDict, defaultdict
 
-from alterpy.exception import AliasError, AliasValueError
+from aldict.exception import AliasError, AliasValueError
 
 
 class AliasDict(UserDict):

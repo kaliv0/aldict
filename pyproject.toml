@@ -3,13 +3,13 @@ requires = ["setuptools>=75.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alterpy"
-version = "1.0.0"
+name = "aldict"
+version = "0.1.0"
 readme = "README.md"
 authors = [{ name = "Kaloyan Ivanov", email = "kaloyan.ivanov88@gmail.com" }]
 description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
 keywords = ["multi-key dictionary", "multidict", "alias-dict"]
-urls = { repository = "https://github.com/kaliv0/alterpy" }
+urls = { repository = "https://github.com/kaliv0/aldict" }
 
 requires-python = ">= 3.11"
 
@@ -23,5 +23,5 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["alterpy"]
+include = ["aldict"]
 exclude = ["tests"]
