@@ -136,13 +136,12 @@ def test_get(alias_dict):
     assert alias_dict.get(".foo") is None
 
 
-def test_pop(alias_dict):
+def test_pop_alias_doesnt_remove_key(alias_dict):
     assert alias_dict.pop(".yml") == {
         "callable": "safe_load",
         "import_mod": "yaml",
         "read_mode": "r",
     }
-    # removing the alias doesn't remove the key
     assert ".yaml" in alias_dict
 
 
@@ -175,15 +174,65 @@ def test_repr(alias_dict):
 
 
 def test_eq():
-    ad_1 = AliasDict({"a": 1, "b": 2})
+    ad_0 = {"a": 1, "b": 2}
+    ad_1 = AliasDict(ad_0)
     ad_1.add_alias("a", "aa", "aaa")
 
-    ad_2 = AliasDict({"a": 1, "b": 2})
+    ad_2 = AliasDict(ad_0)
     ad_2.add_alias("a", "aa", "aaa")
 
-    ad_3 = AliasDict({"a": 1, "b": 2})
+    ad_3 = AliasDict(ad_0)
     ad_3.add_alias("a", "abc")
 
     assert ad_1 == ad_2
     assert ad_1 != ad_3
     assert ad_2 != ad_3
+
+
+def test_dict_len_doesnt_include_aliases(alias_dict):
+    assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
+    assert len(alias_dict) == 3
+
+
+def test_popitem(alias_dict):
+    # pops first item -> MutableMapping.popitem()
+    assert alias_dict.popitem() == (
+        ".json",
+        {"callable": "load", "import_mod": "json", "read_mode": "r"},
+    )
+    assert alias_dict.popitem() == (
+        ".yaml",
+        {"callable": "safe_load", "import_mod": "yaml", "read_mode": "r"},
+    )
+    assert list(alias_dict.aliased_keys()) == []
+    assert list(alias_dict.keys()) == [".toml"]
+
+
+def test_clear(alias_dict):
+    alias_dict.clear()
+    assert len(alias_dict.items()) == 0
+
+
+def test_clear_aliases(alias_dict):
+    alias_dict.clear_aliases()
+    assert len(alias_dict.aliases()) == 0
+    assert list(alias_dict.items()) == [
+        (".json", {"callable": "load", "import_mod": "json", "read_mode": "r"}),
+        (".yaml", {"callable": "safe_load", "import_mod": "yaml", "read_mode": "r"}),
+        (".toml", {"callable": "load", "import_mod": "tomli", "read_mode": "r"}),
+    ]
+
+
+def test_setdefault():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.setdefault("foo", "bar")
+    ad.add_alias("foo", "fizz")
+    assert ad["foo"] == "bar"
+    assert ad["fizz"] == "bar"
+
+
+def test_update_modifies_aliases():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa", "aaa")
+    ad.update(**{"a": 40, "y": 50})
+    assert list(ad.items()) == [("a", 40), ("b", 2), ("y", 50), ("aa", 40), ("aaa", 40)]

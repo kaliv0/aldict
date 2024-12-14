@@ -25,6 +25,9 @@ class AliasDict(UserDict):
             except KeyError:
                 raise AliasError(alias)
 
+    def clear_aliases(self):
+        self._alias_dict.clear()
+
     def aliases(self):
         return self._alias_dict.keys()
 
