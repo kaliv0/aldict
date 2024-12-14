@@ -204,7 +204,7 @@ def test_popitem(alias_dict):
         ".yaml",
         {"callable": "safe_load", "import_mod": "yaml", "read_mode": "r"},
     )
-    assert list(alias_dict.aliased_keys()) == []
+    assert len(alias_dict.aliased_keys()) == 0
     assert list(alias_dict.keys()) == [".toml"]
 
 
@@ -229,6 +229,14 @@ def test_setdefault():
     ad.add_alias("foo", "fizz")
     assert ad["foo"] == "bar"
     assert ad["fizz"] == "bar"
+
+
+def test_setdefault_on_existing_aliased_key():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.setdefault("a", 42)
+    ad.add_alias("a", "aa")
+    assert ad["a"] == 1
+    assert ad["aa"] == 1
 
 
 def test_update_modifies_aliases():
