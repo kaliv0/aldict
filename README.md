@@ -4,7 +4,7 @@
 
 ---
 
-# AlDict
+# Aldict
 
 [![tests](https://img.shields.io/github/actions/workflow/status/kaliv0/aldict/ci.yml)](https://github.com/kaliv0/aldict/actions/workflows/ci.yml)
 ![Python 3.x](https://img.shields.io/badge/python-^3.11-blue?style=flat-square&logo=Python&logoColor=white)
