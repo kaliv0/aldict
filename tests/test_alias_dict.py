@@ -189,9 +189,9 @@ def test_eq():
     assert ad_2 != ad_3
 
 
-def test_dict_len_doesnt_include_aliases(alias_dict):
+def test_dict_len_includes_aliases(alias_dict):
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
-    assert len(alias_dict) == 3
+    assert len(alias_dict) == 4
 
 
 def test_popitem(alias_dict):
