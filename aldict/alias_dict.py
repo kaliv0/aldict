@@ -22,8 +22,11 @@ class AliasDict(UserDict):
         for alias in aliases:
             try:
                 self._alias_dict.__delitem__(alias)
-            except KeyError:
-                raise AliasError(alias)
+            except KeyError as e:
+                raise AliasError(alias) from e
+
+    def clear_aliases(self):
+        self._alias_dict.clear()
 
     def aliases(self):
         return self._alias_dict.keys()
@@ -49,8 +52,8 @@ class AliasDict(UserDict):
     def __missing__(self, key):
         try:
             return super().__getitem__(self._alias_dict[key])
-        except AttributeError:
-            raise KeyError(key)
+        except AttributeError as e:
+            raise KeyError(key) from e
 
     def __setitem__(self, key, value):
         try:
@@ -73,6 +76,9 @@ class AliasDict(UserDict):
     def __iter__(self):
         for item in self.keys():
             yield item
+
+    def __len__(self):
+        return len(self.keys())
 
     def __repr__(self):
         return f"AliasDict({self.items()})"
