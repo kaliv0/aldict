@@ -86,3 +86,12 @@ assert list(ad.items()) == [('x', 10), ('Xx', 10)]
 ```python
 assert list(ad.origin_keys()) == ['x', 'y']
 ```
+- origin_len
+<br>(get original dict <i>length</i> without aliases)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert list(ad.keys()) == ["a", "b", "aa"]
+assert len(ad) == 3
+assert ad.origin_len() == 2
+```

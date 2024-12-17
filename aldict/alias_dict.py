@@ -8,9 +8,10 @@ class AliasDict(UserDict):
 
     def __init__(self, dict_):
         self._alias_dict = {}
-        super().__init__(self, **dict_)
+        super().__init__(**dict_)
 
     def add_alias(self, key, *aliases):
+        """Adds one or more aliases to specified key in the dictionary"""
         if key not in self.data.keys():
             raise KeyError(key)
         for alias in aliases:
@@ -19,6 +20,7 @@ class AliasDict(UserDict):
             self._alias_dict[alias] = key
 
     def remove_alias(self, *aliases):
+        """Removes one or more aliases"""
         for alias in aliases:
             try:
                 self._alias_dict.__delitem__(alias)
@@ -26,28 +28,42 @@ class AliasDict(UserDict):
                 raise AliasError(alias) from e
 
     def clear_aliases(self):
+        """Removes all aliases"""
         self._alias_dict.clear()
 
     def aliases(self):
+        """Returns all aliases present in the dictionary"""
         return self._alias_dict.keys()
 
     def aliased_keys(self):
+        """Returns a dictview of all keys with their corresponding aliases"""
         result = defaultdict(list)
         for alias, key in self._alias_dict.items():
             result[key].append(alias)
         return result.items()
 
     def origin_keys(self):
+        """Returns all keys"""
         return self.data.keys()
 
     def keys(self):
+        """Returns all keys and aliases"""
         return dict(**self.data, **self._alias_dict).keys()
 
     def values(self):
+        """Returns all values"""
         return self.data.values()
 
     def items(self):
+        """Returns a dictview with all items (including alias/value tuples)"""
         return dict(**self.data, **{k: self.data[v] for k, v in self._alias_dict.items()}).items()
+
+    def origin_len(self):
+        """Returns the length of the original dictionary (without aliases)"""
+        return len(self.data)
+
+    def __len__(self):
+        return len(self.keys())
 
     def __missing__(self, key):
         try:
@@ -76,9 +92,6 @@ class AliasDict(UserDict):
     def __iter__(self):
         for item in self.keys():
             yield item
-
-    def __len__(self):
-        return len(self.keys())
 
     def __repr__(self):
         return f"AliasDict({self.items()})"

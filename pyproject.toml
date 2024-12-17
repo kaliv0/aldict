@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aldict"
-version = "1.0.0"
+version = "1.1.0"
 readme = "README.md"
 authors = [{ name = "Kaloyan Ivanov", email = "kaloyan.ivanov88@gmail.com" }]
 description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
