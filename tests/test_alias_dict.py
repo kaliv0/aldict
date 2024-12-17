@@ -194,6 +194,11 @@ def test_dict_len_includes_aliases(alias_dict):
     assert len(alias_dict) == 4
 
 
+def test_dict_origin_len_excludes_aliases(alias_dict):
+    assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
+    assert alias_dict.origin_len() == 3
+
+
 def test_popitem(alias_dict):
     # pops first item -> MutableMapping.popitem()
     assert alias_dict.popitem() == (
