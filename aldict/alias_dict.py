@@ -81,10 +81,10 @@ class AliasDict(UserDict):
     def __delitem__(self, key):
         try:
             self.data.__delitem__(key)
+            self._alias_dict = {k: v for k, v in self._alias_dict.items() if v != key}
         except KeyError:
-            # in case we try to delete alias e.g. via pop()
-            pass
-        self._alias_dict = {k: v for k, v in self._alias_dict.items() if v != key}
+            # in case we try to delete alias via pop() or del
+            return self.remove_alias(key)
 
     def __contains__(self, item):
         return item in set(self.keys())

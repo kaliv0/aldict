@@ -142,7 +142,7 @@ def test_pop_alias_doesnt_remove_key(alias_dict):
         "import_mod": "yaml",
         "read_mode": "r",
     }
-    assert ".yaml" in alias_dict
+    assert list(alias_dict.keys()) == [".json", ".yaml", ".toml"]
 
 
 def test_iter(alias_dict):
