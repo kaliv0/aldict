@@ -71,11 +71,10 @@ ad.add_alias("y", "Yy", "xyz")
 ad.keys()
 ad.values()
 ad.items()
-```
-```shell
-dict_keys(['x', 'y', 'Xx', 'Yy', 'xyz'])
-dict_values([10, 20])
-dict_items([('x', 10), ('y', 20), ('Xx', 10), ('Yy', 20), ('xyz', 20)])
+
+# dict_keys(['x', 'y', 'Xx', 'Yy', 'xyz'])
+# dict_values([10, 20])
+# dict_items([('x', 10), ('y', 20), ('Xx', 10), ('Yy', 20), ('xyz', 20)])
 ```
 - remove key and aliases
 ```python
