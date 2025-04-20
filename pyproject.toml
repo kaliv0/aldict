@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aldict"
-version = "1.0.2"
+version = "1.0.3"
 readme = "README.md"
 authors = [{ name = "Kaloyan Ivanov", email = "kaloyan.ivanov88@gmail.com" }]
 description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
 keywords = ["multi-key dictionary", "multidict", "alias-dict"]
 urls = { repository = "https://github.com/kaliv0/aldict" }
 
-requires-python = ">= 3.11"
+requires-python = ">= 3.10"
 
 [project.optional-dependencies]
 dev = [
