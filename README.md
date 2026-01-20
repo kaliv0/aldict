@@ -16,20 +16,32 @@ Multi-key dictionary, supports adding and manipulating key-aliases pointing to s
 ---
 ## How to use
 
+- initialize with aliases
+<br>(one-liner with <i>aliases</i> dict mapping <i>key</i> to list of <i>aliases</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": ["bb"]})
+assert ad["a"] == ad["aa"] == ad["aaa"] == 1
+assert ad["b"] == ad["bb"] == 2
+```
 - add_alias
-<br>(pass <i>key</i> as first parameter and <i>alias(es)</i> as variadic params)
+<br>(pass <i>key</i> as first parameter and <i>alias(es)</i> as variadic params, list or tuple)
 ```python
 ad = AliasDict({"a": 1, "b": 2})
 ad.add_alias("a", "aa")
 ad.add_alias("b", "bb", "Bbb")
-assert ad["a"] == ad["aa"] == 1
-assert ad["b"] == ad["bb"] == ad["Bbb"] == 2
+ad.add_alias("a", ["aaa", "aaaa"])  
+ad.add_alias("b", ("bbb",))  
+
+assert ad["a"] == ad["aa"] == ad["aaa"] == ad["aaaa"] == 1
+assert ad["b"] == ad["bb"] == ad["Bbb"] == ad["bbb"] == 2
 ```
 - remove_alias
-<br>(pass <i>alias(es)</i> to be removed as variadic parameters)
+<br>(pass <i>alias(es)</i> to be removed as variadic params, list or tuple)
 ```python
 ad.remove_alias("aa")
 ad.remove_alias("bb", "Bbb")
+ad.remove_alias(["aaa", "aaaa"])  
+ad.remove_alias(("bbb",))  
 assert len(ad.aliases()) == 0
 ```
 - clear_aliases
@@ -94,4 +106,39 @@ ad.add_alias("a", "aa")
 assert list(ad.keys()) == ["a", "b", "aa"]
 assert len(ad) == 3
 assert ad.origin_len() == 2
+```
+
+---
+## FrozenAliasDict
+
+Immutable, hashable version of AliasDict (similar to frozenset for set)
+
+- create from dict with aliases
+```python
+from aldict import FrozenAliasDict
+
+frozen = FrozenAliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"], "b": ["bb"]})
+assert frozen["a"] == frozen["aa"] == 1
+```
+- create from existing AliasDict
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+frozen = FrozenAliasDict(ad)
+```
+- extend aliases when freezing
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+frozen = FrozenAliasDict(ad, aliases={"b": ["bb", "bbb"]})
+assert list(frozen.aliases()) == ["aa", "bb", "bbb"]
+```
+- usable in sets and as dict keys
+```python
+frozen1 = FrozenAliasDict({"a": 1})
+frozen2 = FrozenAliasDict({"a": 1})
+frozen3 = FrozenAliasDict({"a": 2})
+
+frozen_set = {frozen1, frozen2, frozen3}
+assert len(frozen_set) == 2  # frozen1 and frozen2 are equal
 ```

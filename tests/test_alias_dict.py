@@ -16,6 +16,67 @@ def test_alias_dict(alias_dict):
     )
 
 
+def test_init_with_none():
+    ad = AliasDict(None)
+    assert len(ad) == 0
+    assert list(ad.keys()) == []
+
+
+def test_init_with_no_argument():
+    ad = AliasDict()
+    assert len(ad) == 0
+    assert list(ad.keys()) == []
+
+
+def test_init_from_aliasdict_preserves_aliases():
+    ad1 = AliasDict({"a": 1, "b": 2})
+    ad1.add_alias("a", "aa", "aaa")
+    ad2 = AliasDict(ad1)
+
+    assert ad2["a"] == 1
+    assert ad2["aa"] == 1
+    assert ad2["aaa"] == 1
+    assert list(ad2.aliases()) == ["aa", "aaa"]
+
+    # Verify independence
+    ad1["a"] = 999
+    ad1.add_alias("b", "bb")
+    assert ad2["a"] == 1
+    assert "bb" not in ad2
+
+
+def test_init_with_aliases_one_liner():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"], "b": ["bb"]})
+    assert ad["a"] == 1
+    assert ad["aa"] == 1
+    assert ad["b"] == 2
+    assert ad["bb"] == 2
+    assert list(ad.aliases()) == ["aa", "bb"]
+
+
+def test_init_with_multiple_aliases_per_key():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa", "aaaa"], "b": ["bb", "bbb"]})
+    assert ad["a"] == ad["aa"] == ad["aaa"] == ad["aaaa"] == 1
+    assert ad["b"] == ad["bb"] == ad["bbb"] == 2
+    assert list(ad.aliases()) == ["aa", "aaa", "aaaa", "bb", "bbb"]
+
+
+def test_init_with_aliases_validation():
+    cases = [
+        (KeyError, None, {"a": 1}, {"nonexistent": ["aa"]}),
+        (
+            AliasValueError,
+            "Key and corresponding alias cannot be equal",
+            {"a": 1},
+            {"a": ["a"]},
+        ),
+        (AliasValueError, "already exists as a key", {"a": 1, "b": 2}, {"a": ["b"]}),
+    ]
+    for exc, match, data, aliases in cases:
+        with pytest.raises(exc, match=match):
+            AliasDict(data, aliases=aliases)
+
+
 def test_add_alias(alias_dict):
     alias_dict.add_alias(".toml", ".tml")
     assert (
@@ -25,8 +86,16 @@ def test_add_alias(alias_dict):
     )
 
 
-def test_add_multiple_aliases(alias_dict):
-    alias_dict.add_alias(".json", ".jsn", ".joojoo", ".jazz")
+@pytest.mark.parametrize(
+    "args",
+    [
+        (".jsn", ".joojoo", ".jazz"),  # *args
+        ([".jsn", ".joojoo", ".jazz"],),  # list
+        ((".jsn", ".joojoo", ".jazz"),),  # tuple
+    ],
+)
+def test_add_multiple_aliases(alias_dict, args):
+    alias_dict.add_alias(".json", *args)
     assert list(alias_dict.keys()) == [
         ".json",
         ".yaml",
@@ -43,6 +112,14 @@ def test_add_alias_raises(alias_dict):
         AliasValueError, match="Key and corresponding alias cannot be equal: '.toml'"
     ):
         alias_dict.add_alias(".toml", ".toml")
+
+
+def test_add_alias_raises_if_alias_is_existing_key():
+    ad = AliasDict({"a": 1, "b": 2})
+    with pytest.raises(
+        AliasValueError, match="Alias 'b' already exists as a key in the dictionary"
+    ):
+        ad.add_alias("a", "b")
 
 
 def test_update_alias(alias_dict):
@@ -79,11 +156,17 @@ def test_remove_alias_raises(alias_dict):
         alias_dict.remove_alias(".foo")
 
 
-def test_remove_multiple_aliases(alias_dict):
+@pytest.mark.parametrize(
+    "args",
+    [
+        (".yml", ".jsn"),  # *args
+        ([".yml", ".jsn"],),  # list
+        ((".yml", ".jsn"),),  # tuple
+    ],
+)
+def test_remove_multiple_aliases(alias_dict, args):
     alias_dict.add_alias(".json", ".jsn")
-    assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml", ".jsn"]
-
-    alias_dict.remove_alias(".yml", ".jsn")
+    alias_dict.remove_alias(*args)
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml"]
 
 
@@ -145,6 +228,13 @@ def test_pop_alias_doesnt_remove_key(alias_dict):
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml"]
 
 
+def test_pop_with_default():
+    ad = AliasDict({"a": 1, "b": 2})
+    assert ad.pop("nonexistent", "default") == "default"
+    assert ad.pop("a") == 1
+    assert ad.pop("a", "gone") == "gone"
+
+
 def test_iter(alias_dict):
     assert [k for k in alias_dict] == [".json", ".yaml", ".toml", ".yml"]
 
@@ -164,12 +254,12 @@ def test_aliased_keys(alias_dict):
 
 def test_repr(alias_dict):
     assert str(alias_dict) == (
-        "AliasDict(dict_items(["
-        "('.json', {'import_mod': 'json', 'callable': 'load', 'read_mode': 'r'}), "
-        "('.yaml', {'import_mod': 'yaml', 'callable': 'safe_load', 'read_mode': 'r'}), "
-        "('.toml', {'import_mod': 'tomli', 'callable': 'load', 'read_mode': 'r'}), "
-        "('.yml', {'import_mod': 'yaml', 'callable': 'safe_load', 'read_mode': 'r'})"
-        "]))"
+        "AliasDict({"
+        "'.json': {'import_mod': 'json', 'callable': 'load', 'read_mode': 'r'}, "
+        "'.yaml': {'import_mod': 'yaml', 'callable': 'safe_load', 'read_mode': 'r'}, "
+        "'.toml': {'import_mod': 'tomli', 'callable': 'load', 'read_mode': 'r'}, "
+        "'.yml': {'import_mod': 'yaml', 'callable': 'safe_load', 'read_mode': 'r'}"
+        "})"
     )
 
 
@@ -216,6 +306,7 @@ def test_popitem(alias_dict):
 def test_clear(alias_dict):
     alias_dict.clear()
     assert len(alias_dict.items()) == 0
+    assert len(alias_dict.aliases()) == 0
 
 
 def test_clear_aliases(alias_dict):
@@ -244,8 +335,35 @@ def test_setdefault_on_existing_aliased_key():
     assert ad["aa"] == 1
 
 
+def test_setdefault_with_alias():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+    result = ad.setdefault("aa", 99)
+    assert result == 1
+    assert ad["a"] == 1
+
+
 def test_update_modifies_aliases():
     ad = AliasDict({"a": 1, "b": 2})
     ad.add_alias("a", "aa", "aaa")
     ad.update(**{"a": 40, "y": 50})
     assert list(ad.items()) == [("a", 40), ("b", 2), ("y", 50), ("aa", 40), ("aaa", 40)]
+
+
+def test_update_with_alias_as_key():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+    ad.update({"aa": 99})
+    assert ad["a"] == 99
+    assert ad["aa"] == 99
+
+
+def test_aliasdict_is_unhashable():
+    ad = AliasDict({"a": 1, "b": 2})
+    with pytest.raises(TypeError, match="unhashable type"):
+        hash(ad)
+
+
+def test_eq_with_non_aliasdict_returns_false():
+    ad = AliasDict({"a": 1, "b": 2})
+    assert (ad == 123) is False
