@@ -450,6 +450,10 @@ def test_or_operator_with_dict():
     assert result["b"] == 20
     assert result["c"] == 3
 
+    assert result.origin_len() == 3
+    assert len(result.aliases()) == 1
+    assert len(result.keys()) == 4
+
 
 def test_or_operator_with_aliasdict():
     ad1 = AliasDict({"a": 1, "b": 2})
@@ -464,6 +468,10 @@ def test_or_operator_with_aliasdict():
     assert result["b"] == 20
     assert result["c"] == result["cc"] == 3
 
+    assert result.origin_len() == 3
+    assert len(result.aliases()) == 2
+    assert len(result.keys()) == 5
+
 
 def test_ror_operator():
     ad = AliasDict({"b": 2, "c": 3})
@@ -474,6 +482,10 @@ def test_ror_operator():
     assert result["b"] == 2
     assert result["c"] == result["cc"] == 3
 
+    assert result.origin_len() == 3
+    assert len(result.aliases()) == 1
+    assert len(result.keys()) == 4
+
 
 def test_ior_operator():
     ad = AliasDict({"a": 1, "b": 2})
@@ -483,6 +495,10 @@ def test_ior_operator():
     assert ad["a"] == ad["aa"] == 1
     assert ad["b"] == 20
     assert ad["c"] == 3
+
+    assert ad.origin_len() == 3
+    assert len(ad.aliases()) == 1
+    assert len(ad.keys()) == 4
 
 
 def test_ior_operator_with_aliasdict():
@@ -496,6 +512,10 @@ def test_ior_operator_with_aliasdict():
 
     assert ad1["a"] == ad1["aa"] == 1
     assert ad1["c"] == ad1["cc"] == 3
+
+    assert ad1.origin_len() == 3
+    assert len(ad1.aliases()) == 2
+    assert len(ad1.keys()) == 5
 
 
 def test_fromkeys():

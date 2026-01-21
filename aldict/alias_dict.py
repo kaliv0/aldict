@@ -154,9 +154,11 @@ class AliasDict(UserDict):
         if not isinstance(other, Mapping):
             return NotImplemented
         new = self.copy()
-        new.update(other)
         if isinstance(other, AliasDict):
+            new.update(other.data)
             new._alias_dict.update(other._alias_dict)
+        else:
+            new.update(other)
         return new
 
     def __ror__(self, other):
@@ -168,9 +170,11 @@ class AliasDict(UserDict):
         return new
 
     def __ior__(self, other):
-        self.update(other)
         if isinstance(other, AliasDict):
+            self.update(other.data)
             self._alias_dict.update(other._alias_dict)
+        else:
+            self.update(other)
         return self
 
     __hash__ = None
