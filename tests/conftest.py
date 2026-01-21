@@ -5,7 +5,7 @@ from aldict.alias_dict import AliasDict
 
 @pytest.fixture()
 def alias_dict():
-    ad = AliasDict(
+    return AliasDict(
         {
             ".json": {
                 "import_mod": "json",
@@ -22,7 +22,6 @@ def alias_dict():
                 "callable": "load",
                 "read_mode": "r",
             },
-        }
+        },
+        aliases={".yaml": [".yml"]},
     )
-    ad.add_alias(".yaml", ".yml")
-    return ad
