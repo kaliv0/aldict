@@ -16,20 +16,32 @@ Multi-key dictionary, supports adding and manipulating key-aliases pointing to s
 ---
 ## How to use
 
+- initialize with aliases
+<br>(one-liner with <i>aliases</i> dict mapping <i>key</i> to list of <i>aliases</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": ["bb"]})
+assert ad["a"] == ad["aa"] == ad["aaa"] == 1
+assert ad["b"] == ad["bb"] == 2
+```
 - add_alias
-<br>(pass <i>key</i> as first parameter and <i>alias(es)</i> as variadic params)
+<br>(pass <i>key</i> as first parameter and <i>alias(es)</i> as variadic params, list or tuple)
 ```python
 ad = AliasDict({"a": 1, "b": 2})
 ad.add_alias("a", "aa")
 ad.add_alias("b", "bb", "Bbb")
-assert ad["a"] == ad["aa"] == 1
-assert ad["b"] == ad["bb"] == ad["Bbb"] == 2
+ad.add_alias("a", ["aaa", "aaaa"])  
+ad.add_alias("b", ("bbb",))  
+
+assert ad["a"] == ad["aa"] == ad["aaa"] == ad["aaaa"] == 1
+assert ad["b"] == ad["bb"] == ad["Bbb"] == ad["bbb"] == 2
 ```
 - remove_alias
-<br>(pass <i>alias(es)</i> to be removed as variadic parameters)
+<br>(pass <i>alias(es)</i> to be removed as variadic params, list or tuple)
 ```python
 ad.remove_alias("aa")
 ad.remove_alias("bb", "Bbb")
+ad.remove_alias(["aaa", "aaaa"])  
+ad.remove_alias(("bbb",))  
 assert len(ad.aliases()) == 0
 ```
 - clear_aliases
@@ -56,10 +68,10 @@ ad.add_alias("b", "bb", "B")
 ad.add_alias("a", "ab", "A")
 assert list(ad.aliases()) == ['aa', 'bb', 'B', 'ab', 'A']
 ```
-- aliased_keys
+- keys_with_aliases
 <br>(read <i>keys</i> with corresponding <i>alias(es)</i>)
 ```python
-assert dict(ad.aliased_keys()) == {'a': ['aa', 'ab', 'A'], 'b': ['bb', 'B']}
+assert dict(ad.keys_with_aliases()) == {'a': ['aa', 'ab', 'A'], 'b': ['bb', 'B']}
 ```
 - read dictviews
 <br>(<i>dict.keys()</i> and <i>dict.items()</i> include <i>aliased</i> versions)
@@ -94,4 +106,53 @@ ad.add_alias("a", "aa")
 assert list(ad.keys()) == ["a", "b", "aa"]
 assert len(ad) == 3
 assert ad.origin_len() == 2
+```
+- copy
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+ad_copy = ad.copy()
+assert ad_copy == ad
+assert ad_copy is not ad
+```
+- merge with | and |= operators
+```python
+ad1 = AliasDict({"a": 1}, aliases={"a": ["aa"]})
+ad2 = AliasDict({"b": 2}, aliases={"b": ["bb"]})
+
+merged = ad1 | ad2
+assert merged["aa"] == 1
+assert merged["bb"] == 2
+
+ad1 |= {"c": 3}
+assert ad1["c"] == 3
+```
+- fromkeys
+```python
+ad = AliasDict.fromkeys(["a", "b", "c"], 0, aliases={"a": ["aa"]})
+assert ad["a"] == ad["aa"] == 0
+```
+- origin_key
+<br>(get original <i>key</i> for an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.origin_key("aa") == "a"
+assert ad.origin_key("a") is None  # not an alias
+```
+- is_alias
+<br>(check if <i>key</i> is an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.is_alias("aa") is True
+assert ad.is_alias("a") is False
+```
+- has_aliases
+<br>(check if <i>key</i> has any <i>aliases</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.has_aliases("a") is True
+assert ad.has_aliases("b") is False
 ```

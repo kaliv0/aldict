@@ -1,27 +1,33 @@
-[build-system]
-requires = ["setuptools>=75.6.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "aldict"
-version = "1.0.3"
-readme = "README.md"
-authors = [{ name = "Kaloyan Ivanov", email = "kaloyan.ivanov88@gmail.com" }]
+version = "1.1.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "kaliv0", email = "kaloyan.ivanov88@gmail.com" },
+]
 description = "Multi-key dictionary, supports adding and manipulating key-aliases pointing to shared values"
 keywords = ["multi-key dictionary", "multidict", "alias-dict"]
+readme = "README.md"
+license-files = ["LICENSE"]
+
 urls = { repository = "https://github.com/kaliv0/aldict" }
 
-requires-python = ">= 3.10"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3.4",
-    "ruff>=0.8.3",
-    "build>=1.2.2",
-    "twine>=6.0.1",
+dependencies = [
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["aldict"]
-exclude = ["tests"]
+[dependency-groups]
+dev = [
+    "ruff>=0.12.4",
+    "pytest>=8.3.2"
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm.build]
+excludes = ["tests/"]
+
+[tool.ruff]
+fix = true
+line-length = 100
