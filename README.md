@@ -93,11 +93,6 @@ ad.items()
 ad.pop("y")
 assert list(ad.items()) == [('x', 10), ('Xx', 10)]
 ```
-- origin_keys
-<br>(get original <i>keys</i> only)
-```python
-assert list(ad.origin_keys()) == ['x', 'y']
-```
 - origin_len
 <br>(get original dict <i>length</i> without aliases)
 ```python
@@ -106,6 +101,35 @@ ad.add_alias("a", "aa")
 assert list(ad.keys()) == ["a", "b", "aa"]
 assert len(ad) == 3
 assert ad.origin_len() == 2
+```
+- origin_keys
+<br>(get original <i>keys</i> only)
+```python
+assert list(ad.origin_keys()) == ['x', 'y']
+```
+- origin_key
+<br>(get original <i>key</i> for an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.origin_key("aa") == "a"
+assert ad.origin_key("a") is None  # not an alias
+```
+- is_alias
+<br>(check if <i>key</i> is an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.is_alias("aa") is True
+assert ad.is_alias("a") is False
+```
+- has_aliases
+<br>(check if <i>key</i> has any <i>aliases</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.has_aliases("a") is True
+assert ad.has_aliases("b") is False
 ```
 - copy
 ```python
@@ -131,28 +155,4 @@ assert ad1["c"] == 3
 ```python
 ad = AliasDict.fromkeys(["a", "b", "c"], 0, aliases={"a": ["aa"]})
 assert ad["a"] == ad["aa"] == 0
-```
-- origin_key
-<br>(get original <i>key</i> for an <i>alias</i>)
-```python
-ad = AliasDict({"a": 1, "b": 2})
-ad.add_alias("a", "aa")
-assert ad.origin_key("aa") == "a"
-assert ad.origin_key("a") is None  # not an alias
-```
-- is_alias
-<br>(check if <i>key</i> is an <i>alias</i>)
-```python
-ad = AliasDict({"a": 1, "b": 2})
-ad.add_alias("a", "aa")
-assert ad.is_alias("aa") is True
-assert ad.is_alias("a") is False
-```
-- has_aliases
-<br>(check if <i>key</i> has any <i>aliases</i>)
-```python
-ad = AliasDict({"a": 1, "b": 2})
-ad.add_alias("a", "aa")
-assert ad.has_aliases("a") is True
-assert ad.has_aliases("b") is False
 ```
