@@ -156,38 +156,3 @@ ad.add_alias("a", "aa")
 assert ad.has_aliases("a") is True
 assert ad.has_aliases("b") is False
 ```
-
----
-## FrozenAliasDict
-
-Immutable, hashable version of AliasDict (similar to frozenset for set)
-
-- create from dict with aliases
-```python
-from aldict import FrozenAliasDict
-
-frozen = FrozenAliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"], "b": ["bb"]})
-assert frozen["a"] == frozen["aa"] == 1
-```
-- create from existing AliasDict
-```python
-ad = AliasDict({"a": 1, "b": 2})
-ad.add_alias("a", "aa")
-frozen = FrozenAliasDict(ad)
-```
-- extend aliases when freezing
-```python
-ad = AliasDict({"a": 1, "b": 2})
-ad.add_alias("a", "aa")
-frozen = FrozenAliasDict(ad, aliases={"b": ["bb", "bbb"]})
-assert list(frozen.aliases()) == ["aa", "bb", "bbb"]
-```
-- usable in sets and as dict keys
-```python
-frozen1 = FrozenAliasDict({"a": 1})
-frozen2 = FrozenAliasDict({"a": 1})
-frozen3 = FrozenAliasDict({"a": 2})
-
-frozen_set = {frozen1, frozen2, frozen3}
-assert len(frozen_set) == 2  # frozen1 and frozen2 are equal
-```

@@ -1,6 +1,5 @@
 import copy
 import pickle
-from unittest.mock import patch
 
 import pytest
 
@@ -116,14 +115,6 @@ def test_init_from_aliasdict_with_non_identifier_string_keys():
     assert ad2["my-key"] == ad2["alt-key"] == 1
     assert ad2["123start"] == 2
     assert list(ad2.aliases()) == ["alt-key"]
-
-
-def test_init_with_none_does_not_call_update():
-    # Ensure AliasDict(None) doesn't call update() - required for FrozenAliasDict compatibility
-    with patch.object(AliasDict, "update") as mock_update:
-        ad = AliasDict(None)
-        mock_update.assert_not_called()
-    assert len(ad) == 0
 
 
 def test_add_alias(alias_dict):
