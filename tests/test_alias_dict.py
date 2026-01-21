@@ -1,3 +1,7 @@
+import copy
+import pickle
+from unittest.mock import patch
+
 import pytest
 
 from aldict import AliasDict, AliasValueError, AliasError
@@ -33,9 +37,7 @@ def test_init_from_aliasdict_preserves_aliases():
     ad1.add_alias("a", "aa", "aaa")
     ad2 = AliasDict(ad1)
 
-    assert ad2["a"] == 1
-    assert ad2["aa"] == 1
-    assert ad2["aaa"] == 1
+    assert ad2["a"] == ad2["aa"] == ad2["aaa"] == 1
     assert list(ad2.aliases()) == ["aa", "aaa"]
 
     # Verify independence
@@ -47,10 +49,8 @@ def test_init_from_aliasdict_preserves_aliases():
 
 def test_init_with_aliases_one_liner():
     ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"], "b": ["bb"]})
-    assert ad["a"] == 1
-    assert ad["aa"] == 1
-    assert ad["b"] == 2
-    assert ad["bb"] == 2
+    assert ad["a"] == ad["aa"] == 1
+    assert ad["b"] == ad["bb"] == 2
     assert list(ad.aliases()) == ["aa", "bb"]
 
 
@@ -75,6 +75,55 @@ def test_init_with_aliases_validation():
     for exc, match, data, aliases in cases:
         with pytest.raises(exc, match=match):
             AliasDict(data, aliases=aliases)
+
+
+def test_init_with_non_string_keys():
+    ad = AliasDict({1: "one", 2: "two", (1, 2): "tuple_key"})
+    assert ad[1] == "one"
+    assert ad[2] == "two"
+    assert ad[(1, 2)] == "tuple_key"
+
+    ad.add_alias(1, 11)
+    assert ad[11] == "one"
+
+
+def test_init_from_aliasdict_with_non_string_keys():
+    ad1 = AliasDict({1: "one", 2: "two", (1, 2): "tuple_key"})
+    ad1.add_alias(1, 11, 111)
+    ad2 = AliasDict(ad1)
+
+    assert ad2[1] == ad2[11] == ad2[111] == "one"
+    assert ad2[(1, 2)] == "tuple_key"
+    assert list(ad2.aliases()) == [11, 111]
+
+
+def test_init_with_non_identifier_string_keys():
+    ad = AliasDict({"my-key": 1, "another.key": 2, "123": 3, "has spaces": 4})
+    assert ad["my-key"] == 1
+    assert ad["another.key"] == 2
+    assert ad["123"] == 3
+    assert ad["has spaces"] == 4
+
+    ad.add_alias("my-key", "also-dashed")
+    assert ad["also-dashed"] == 1
+
+
+def test_init_from_aliasdict_with_non_identifier_string_keys():
+    ad1 = AliasDict({"my-key": 1, "123start": 2})
+    ad1.add_alias("my-key", "alt-key")
+    ad2 = AliasDict(ad1)
+
+    assert ad2["my-key"] == ad2["alt-key"] == 1
+    assert ad2["123start"] == 2
+    assert list(ad2.aliases()) == ["alt-key"]
+
+
+def test_init_with_none_does_not_call_update():
+    # Ensure AliasDict(None) doesn't call update() - required for FrozenAliasDict compatibility
+    with patch.object(AliasDict, "update") as mock_update:
+        ad = AliasDict(None)
+        mock_update.assert_not_called()
+    assert len(ad) == 0
 
 
 def test_add_alias(alias_dict):
@@ -235,6 +284,12 @@ def test_pop_with_default():
     assert ad.pop("a", "gone") == "gone"
 
 
+def test_pop_nonexistent_key_raises():
+    ad = AliasDict({"a": 1, "b": 2})
+    with pytest.raises(KeyError):
+        ad.pop("nonexistent")
+
+
 def test_iter(alias_dict):
     assert [k for k in alias_dict] == [".json", ".yaml", ".toml", ".yml"]
 
@@ -243,10 +298,10 @@ def test_origin_keys(alias_dict):
     assert list(alias_dict.origin_keys()) == [".json", ".yaml", ".toml"]
 
 
-def test_aliased_keys(alias_dict):
-    assert list(alias_dict.aliased_keys()) == [(".yaml", [".yml"])]
+def test_keys_with_aliases(alias_dict):
+    assert list(alias_dict.keys_with_aliases()) == [(".yaml", [".yml"])]
     alias_dict.add_alias(".toml", ".tml", ".tommy", ".tomograph")
-    assert list(alias_dict.aliased_keys()) == [
+    assert list(alias_dict.keys_with_aliases()) == [
         (".yaml", [".yml"]),
         (".toml", [".tml", ".tommy", ".tomograph"]),
     ]
@@ -299,7 +354,7 @@ def test_popitem(alias_dict):
         ".yaml",
         {"callable": "safe_load", "import_mod": "yaml", "read_mode": "r"},
     )
-    assert len(alias_dict.aliased_keys()) == 0
+    assert len(alias_dict.keys_with_aliases()) == 0
     assert list(alias_dict.keys()) == [".toml"]
 
 
@@ -367,3 +422,187 @@ def test_aliasdict_is_unhashable():
 def test_eq_with_non_aliasdict_returns_false():
     ad = AliasDict({"a": 1, "b": 2})
     assert (ad == 123) is False
+
+
+def test_large_dictionary_with_many_aliases():
+    # Ensure operations remain efficient with many keys and aliases
+    ad = AliasDict({f"key_{i}": i for i in range(1000)})
+    for i in range(1000):
+        ad.add_alias(f"key_{i}", f"alias_{i}")
+
+    assert len(ad) == 2000
+    assert ad["key_500"] == ad["alias_500"] == 500
+    assert ad.origin_len() == 1000
+
+
+def test_copy():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa", "aaa")
+
+    copy_ = ad.copy()
+    assert copy_ == ad
+    assert copy_ is not ad
+
+    # Verify independence
+    ad["a"] = 999
+    ad.add_alias("b", "bb")
+    assert copy_["a"] == 1
+    assert "bb" not in copy_
+
+
+def test_or_operator_with_dict():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+    result = ad | {"b": 20, "c": 3}
+
+    assert result["a"] == result["aa"] == 1
+    assert result["b"] == 20
+    assert result["c"] == 3
+
+
+def test_or_operator_with_aliasdict():
+    ad1 = AliasDict({"a": 1, "b": 2})
+    ad1.add_alias("a", "aa")
+
+    ad2 = AliasDict({"b": 20, "c": 3})
+    ad2.add_alias("c", "cc")
+
+    result = ad1 | ad2
+
+    assert result["a"] == result["aa"] == 1
+    assert result["b"] == 20
+    assert result["c"] == result["cc"] == 3
+
+
+def test_ror_operator():
+    ad = AliasDict({"b": 2, "c": 3})
+    ad.add_alias("c", "cc")
+    result = {"a": 1, "b": 20} | ad
+
+    assert result["a"] == 1
+    assert result["b"] == 2
+    assert result["c"] == result["cc"] == 3
+
+
+def test_ior_operator():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+    ad |= {"b": 20, "c": 3}
+
+    assert ad["a"] == ad["aa"] == 1
+    assert ad["b"] == 20
+    assert ad["c"] == 3
+
+
+def test_ior_operator_with_aliasdict():
+    ad1 = AliasDict({"a": 1, "b": 2})
+    ad1.add_alias("a", "aa")
+
+    ad2 = AliasDict({"c": 3})
+    ad2.add_alias("c", "cc")
+
+    ad1 |= ad2
+
+    assert ad1["a"] == ad1["aa"] == 1
+    assert ad1["c"] == ad1["cc"] == 3
+
+
+def test_fromkeys():
+    ad = AliasDict.fromkeys(["a", "b", "c"], 0)
+    assert ad["a"] == ad["b"] == ad["c"] == 0
+    assert len(ad) == 3
+
+
+def test_fromkeys_with_aliases():
+    ad = AliasDict.fromkeys(["a", "b"], 0, aliases={"a": ["aa"], "b": ["bb"]})
+    assert ad["a"] == ad["aa"] == 0
+    assert ad["b"] == ad["bb"] == 0
+    assert len(ad) == 4
+
+
+def test_pickle():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa", "aaa")
+    restored = pickle.loads(pickle.dumps(ad))
+
+    assert restored == ad
+    assert restored["aa"] == 1
+    assert list(restored.aliases()) == ["aa", "aaa"]
+
+
+def test_reversed():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+
+    assert list(ad) == ["a", "b", "aa"]
+    assert list(reversed(ad)) == ["aa", "b", "a"]
+
+
+def test_copy_module_shallow():
+    ad = AliasDict({"a": [1, 2], "b": 2})
+    ad.add_alias("a", "aa")
+    shallow = copy.copy(ad)
+
+    assert shallow == ad
+    assert shallow is not ad
+    assert shallow["a"] is ad["a"]  # Shallow copy shares nested objects
+    assert list(shallow.aliases()) == ["aa"]
+
+
+def test_copy_module_deep():
+    ad = AliasDict({"a": [1, 2], "b": 2})
+    ad.add_alias("a", "aa")
+    deep = copy.deepcopy(ad)
+
+    assert deep == ad
+    assert deep is not ad
+    assert deep["a"] is not ad["a"]  # Deep copy has independent nested objects
+    assert deep["a"] == ad["a"]
+    assert list(deep.aliases()) == ["aa"]
+
+
+def test_origin_key():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa", "aaa")
+
+    assert ad.origin_key("aa") == ad.origin_key("aaa") == "a"
+    assert ad.origin_key("a") is None  # Not an alias, it's an origin key
+    assert ad.origin_key("nonexistent") is None
+
+
+def test_is_alias():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+
+    assert ad.is_alias("aa") is True
+    assert ad.is_alias("a") is False  # Origin key, not alias
+    assert ad.is_alias("b") is False
+    assert ad.is_alias("nonexistent") is False
+
+
+def test_has_aliases():
+    ad = AliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+
+    assert ad.has_aliases("a") is True
+    assert ad.has_aliases("b") is False
+    assert ad.has_aliases("aa") is False  # Alias, not origin key
+    assert ad.has_aliases("nonexistent") is False
+
+
+def test_subclass_copy_and_fromkeys():
+    class MyAliasDict(AliasDict):
+        pass
+
+    ad = MyAliasDict({"a": 1, "b": 2})
+    ad.add_alias("a", "aa")
+
+    # copy() should return the subclass type
+    copied = ad.copy()
+    assert type(copied) is MyAliasDict
+    assert copied["aa"] == 1
+
+    # fromkeys() should return the subclass type
+    from_keys = MyAliasDict.fromkeys(["x", "y"], 0, aliases={"x": ["xx"]})
+    assert type(from_keys) is MyAliasDict
+    assert from_keys["xx"] == 0

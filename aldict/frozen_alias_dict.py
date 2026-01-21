@@ -1,6 +1,32 @@
 from aldict.alias_dict import AliasDict
 
 
+def immutable(*methods):
+    """Class decorator that makes specified methods raise TypeError."""
+
+    def decorator(cls):
+        def raise_immutable(self, *args, **kwargs):
+            raise TypeError(f"{cls.__name__} is immutable")
+
+        for method in methods:
+            setattr(cls, method, raise_immutable)
+        return cls
+
+    return decorator
+
+
+@immutable(
+    "__setitem__",
+    "__delitem__",
+    "add_alias",
+    "remove_alias",
+    "clear_aliases",
+    "clear",
+    "pop",
+    "popitem",
+    "setdefault",
+    "update",
+)
 class FrozenAliasDict(AliasDict):
     """Immutable, hashable version of AliasDict."""
 
@@ -33,22 +59,3 @@ class FrozenAliasDict(AliasDict):
 
     def __repr__(self):
         return f"FrozenAliasDict({dict(self.items())})"
-
-    def _raise_immutable(self, *args, **kwargs):
-        raise TypeError("FrozenAliasDict is immutable")
-
-
-_MUTATING_METHODS = [
-    "__setitem__",
-    "__delitem__",
-    "add_alias",
-    "remove_alias",
-    "clear_aliases",
-    "clear",
-    "pop",
-    "popitem",
-    "setdefault",
-    "update",
-]
-for _method in _MUTATING_METHODS:
-    setattr(FrozenAliasDict, _method, FrozenAliasDict._raise_immutable)

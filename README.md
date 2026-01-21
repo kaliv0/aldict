@@ -68,10 +68,10 @@ ad.add_alias("b", "bb", "B")
 ad.add_alias("a", "ab", "A")
 assert list(ad.aliases()) == ['aa', 'bb', 'B', 'ab', 'A']
 ```
-- aliased_keys
+- keys_with_aliases
 <br>(read <i>keys</i> with corresponding <i>alias(es)</i>)
 ```python
-assert dict(ad.aliased_keys()) == {'a': ['aa', 'ab', 'A'], 'b': ['bb', 'B']}
+assert dict(ad.keys_with_aliases()) == {'a': ['aa', 'ab', 'A'], 'b': ['bb', 'B']}
 ```
 - read dictviews
 <br>(<i>dict.keys()</i> and <i>dict.items()</i> include <i>aliased</i> versions)
@@ -106,6 +106,55 @@ ad.add_alias("a", "aa")
 assert list(ad.keys()) == ["a", "b", "aa"]
 assert len(ad) == 3
 assert ad.origin_len() == 2
+```
+- copy
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+ad_copy = ad.copy()
+assert ad_copy == ad
+assert ad_copy is not ad
+```
+- merge with | and |= operators
+```python
+ad1 = AliasDict({"a": 1}, aliases={"a": ["aa"]})
+ad2 = AliasDict({"b": 2}, aliases={"b": ["bb"]})
+
+merged = ad1 | ad2
+assert merged["aa"] == 1
+assert merged["bb"] == 2
+
+ad1 |= {"c": 3}
+assert ad1["c"] == 3
+```
+- fromkeys
+```python
+ad = AliasDict.fromkeys(["a", "b", "c"], 0, aliases={"a": ["aa"]})
+assert ad["a"] == ad["aa"] == 0
+```
+- origin_key
+<br>(get original <i>key</i> for an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.origin_key("aa") == "a"
+assert ad.origin_key("a") is None  # not an alias
+```
+- is_alias
+<br>(check if <i>key</i> is an <i>alias</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.is_alias("aa") is True
+assert ad.is_alias("a") is False
+```
+- has_aliases
+<br>(check if <i>key</i> has any <i>aliases</i>)
+```python
+ad = AliasDict({"a": 1, "b": 2})
+ad.add_alias("a", "aa")
+assert ad.has_aliases("a") is True
+assert ad.has_aliases("b") is False
 ```
 
 ---

@@ -1,3 +1,5 @@
+import pickle
+
 import pytest
 
 from aldict import AliasDict, FrozenAliasDict, AliasValueError
@@ -171,3 +173,11 @@ def test_equality():
 def test_repr():
     frozen = FrozenAliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
     assert str(frozen) == "FrozenAliasDict({'a': 1, 'b': 2, 'aa': 1})"
+
+
+def test_pickle():
+    frozen = FrozenAliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    restored = pickle.loads(pickle.dumps(frozen))
+    assert restored == frozen
+    assert restored["aa"] == 1
+    assert hash(restored) == hash(frozen)

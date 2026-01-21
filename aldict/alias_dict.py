@@ -1,4 +1,5 @@
 from collections import UserDict, defaultdict
+from collections.abc import Mapping
 from itertools import chain
 
 from aldict.exception import AliasError, AliasValueError
@@ -10,10 +11,10 @@ class AliasDict(UserDict):
     def __init__(self, dict_=None, /, aliases=None):
         self._alias_dict = {}
         if isinstance(dict_, AliasDict):
-            super().__init__(**dict_.data)
+            super().__init__(dict_.data)
             self._alias_dict = dict(dict_._alias_dict)
         else:
-            super().__init__(**(dict_ or {}))
+            super().__init__(dict_)
 
         if aliases:
             for key, alias_list in aliases.items():
@@ -37,11 +38,16 @@ class AliasDict(UserDict):
             try:
                 self._alias_dict.__delitem__(alias)
             except KeyError as e:
-                raise AliasError(alias) from e
+                raise AliasError(f"Alias '{alias}' not found") from e
 
     @staticmethod
     def _unpack(args):
         return args[0] if len(args) == 1 and isinstance(args[0], (list, tuple)) else args
+
+    @classmethod
+    def fromkeys(cls, iterable, value=None, aliases=None):
+        """Create an AliasDict from an iterable of keys with optional aliases."""
+        return cls(dict.fromkeys(iterable, value), aliases=aliases)
 
     def clear(self):
         """Clear all data and aliases."""
@@ -56,7 +62,15 @@ class AliasDict(UserDict):
         """Return all aliases."""
         return self._alias_dict.keys()
 
-    def aliased_keys(self):
+    def is_alias(self, key):
+        """Return True if the key is an alias, False otherwise."""
+        return key in self._alias_dict
+
+    def has_aliases(self, key):
+        """Return True if the key has any aliases, False otherwise."""
+        return key in self._alias_dict.values()
+
+    def keys_with_aliases(self):
         """Return keys with their aliases."""
         result = defaultdict(list)
         for alias, key in self._alias_dict.items():
@@ -66,6 +80,10 @@ class AliasDict(UserDict):
     def origin_keys(self):
         """Return original keys (without aliases)."""
         return self.data.keys()
+
+    def origin_key(self, alias):
+        """Return the original key for an alias, or None if not an alias."""
+        return self._alias_dict.get(alias)
 
     def keys(self):
         """Return all keys and aliases."""
@@ -117,6 +135,13 @@ class AliasDict(UserDict):
     def __iter__(self):
         return chain(self.data, self._alias_dict)
 
+    def __reversed__(self):
+        return chain(reversed(self._alias_dict), reversed(self.data))
+
+    def copy(self):
+        """Return a shallow copy of the AliasDict."""
+        return type(self)(self)
+
     def __repr__(self):
         return f"AliasDict({dict(self.items())})"
 
@@ -124,5 +149,28 @@ class AliasDict(UserDict):
         if not isinstance(other, AliasDict):
             return NotImplemented
         return self.data == other.data and self._alias_dict == other._alias_dict
+
+    def __or__(self, other):
+        if not isinstance(other, Mapping):
+            return NotImplemented
+        new = self.copy()
+        new.update(other)
+        if isinstance(other, AliasDict):
+            new._alias_dict.update(other._alias_dict)
+        return new
+
+    def __ror__(self, other):
+        if not isinstance(other, Mapping):
+            return NotImplemented
+        new = AliasDict(other)
+        new.update(self.data)
+        new._alias_dict.update(self._alias_dict)
+        return new
+
+    def __ior__(self, other):
+        self.update(other)
+        if isinstance(other, AliasDict):
+            self._alias_dict.update(other._alias_dict)
+        return self
 
     __hash__ = None
