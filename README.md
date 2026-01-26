@@ -17,9 +17,9 @@ Multi-key dictionary, supports adding and manipulating key-aliases pointing to s
 ## How to use
 
 - initialize with aliases
-<br>(one-liner with <i>aliases</i> dict mapping <i>key</i> to list of <i>aliases</i>)
+<br>(one-liner with <i>aliases</i> dict mapping <i>original key</i> to <i>alias keys</i>)
 ```python
-ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": ["bb"]})
+ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": "bb"})
 assert ad["a"] == ad["aa"] == ad["aaa"] == 1
 assert ad["b"] == ad["bb"] == 2
 ```
@@ -141,8 +141,8 @@ assert ad_copy is not ad
 ```
 - merge with | and |= operators
 ```python
-ad1 = AliasDict({"a": 1}, aliases={"a": ["aa"]})
-ad2 = AliasDict({"b": 2}, aliases={"b": ["bb"]})
+ad1 = AliasDict({"a": 1}, aliases={"a": "aa"})
+ad2 = AliasDict({"b": 2}, aliases={"b": "bb"})
 
 merged = ad1 | ad2
 assert merged["aa"] == 1
@@ -153,6 +153,6 @@ assert ad1["c"] == 3
 ```
 - fromkeys
 ```python
-ad = AliasDict.fromkeys(["a", "b", "c"], 0, aliases={"a": ["aa"]})
+ad = AliasDict.fromkeys(["a", "b", "c"], 0, aliases={"a": "aa"})
 assert ad["a"] == ad["aa"] == 0
 ```
