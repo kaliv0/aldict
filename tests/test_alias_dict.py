@@ -46,7 +46,7 @@ def test_init_from_aliasdict_preserves_aliases():
 
 
 def test_init_with_aliases_one_liner():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"], "b": ["bb"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa", "b": "bb"})
     assert ad["a"] == ad["aa"] == 1
     assert ad["b"] == ad["bb"] == 2
     assert list(ad.aliases()) == ["aa", "bb"]
@@ -106,7 +106,7 @@ def test_init_with_non_identifier_string_keys():
 
 
 def test_init_from_aliasdict_with_non_identifier_string_keys():
-    ad1 = AliasDict({"my-key": 1, "123start": 2}, aliases={"my-key": ["alt-key"]})
+    ad1 = AliasDict({"my-key": 1, "123start": 2}, aliases={"my-key": "alt-key"})
     ad2 = AliasDict(ad1)
 
     assert ad2["my-key"] == ad2["alt-key"] == 1
@@ -309,7 +309,7 @@ def test_repr(alias_dict):
 def test_eq():
     ad_1 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"]})
     ad_2 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"]})
-    ad_3 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["abc"]})
+    ad_3 = AliasDict({"a": 1, "b": 2}, aliases={"a": "abc"})
 
     assert ad_1 == ad_2
     assert ad_1 != ad_3
@@ -373,7 +373,7 @@ def test_setdefault_on_existing_aliased_key():
 
 
 def test_setdefault_with_alias():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     result = ad.setdefault("aa", 99)
     assert result == 1
     assert ad["a"] == 1
@@ -386,7 +386,7 @@ def test_update_modifies_aliases():
 
 
 def test_update_with_alias_as_key():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     ad.update({"aa": 99})
     assert ad["a"] == 99
     assert ad["aa"] == 99
@@ -428,7 +428,7 @@ def test_copy():
 
 
 def test_or_operator_with_dict():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     result = ad | {"b": 20, "c": 3}
 
     assert result["a"] == result["aa"] == 1
@@ -441,8 +441,8 @@ def test_or_operator_with_dict():
 
 
 def test_or_operator_with_aliasdict():
-    ad1 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
-    ad2 = AliasDict({"b": 20, "c": 3}, aliases={"c": ["cc"]})
+    ad1 = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
+    ad2 = AliasDict({"b": 20, "c": 3}, aliases={"c": "cc"})
     result = ad1 | ad2
 
     assert result["a"] == result["aa"] == 1
@@ -455,7 +455,7 @@ def test_or_operator_with_aliasdict():
 
 
 def test_ror_operator():
-    ad = AliasDict({"b": 2, "c": 3}, aliases={"c": ["cc"]})
+    ad = AliasDict({"b": 2, "c": 3}, aliases={"c": "cc"})
     result = {"a": 1, "b": 20} | ad
 
     assert result["a"] == 1
@@ -468,7 +468,7 @@ def test_ror_operator():
 
 
 def test_ior_operator():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     ad |= {"b": 20, "c": 3}
 
     assert ad["a"] == ad["aa"] == 1
@@ -481,8 +481,8 @@ def test_ior_operator():
 
 
 def test_ior_operator_with_aliasdict():
-    ad1 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
-    ad2 = AliasDict({"c": 3}, aliases={"c": ["cc"]})
+    ad1 = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
+    ad2 = AliasDict({"c": 3}, aliases={"c": "cc"})
     ad1 |= ad2
 
     assert ad1["a"] == ad1["aa"] == 1
@@ -516,13 +516,13 @@ def test_pickle():
 
 
 def test_reversed():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     assert list(ad) == ["a", "b", "aa"]
     assert list(reversed(ad)) == ["aa", "b", "a"]
 
 
 def test_copy_module_shallow():
-    ad = AliasDict({"a": [1, 2], "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": [1, 2], "b": 2}, aliases={"a": "aa"})
     shallow = copy.copy(ad)
 
     assert shallow == ad
@@ -532,7 +532,7 @@ def test_copy_module_shallow():
 
 
 def test_copy_module_deep():
-    ad = AliasDict({"a": [1, 2], "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": [1, 2], "b": 2}, aliases={"a": "aa"})
     deep = copy.deepcopy(ad)
 
     assert deep == ad
@@ -550,7 +550,7 @@ def test_origin_key():
 
 
 def test_is_alias():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     assert ad.is_alias("aa") is True
     assert ad.is_alias("a") is False  # Origin key, not alias
     assert ad.is_alias("b") is False
@@ -558,7 +558,7 @@ def test_is_alias():
 
 
 def test_has_aliases():
-    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
     assert ad.has_aliases("a") is True
     assert ad.has_aliases("b") is False
     assert ad.has_aliases("aa") is False  # Alias, not origin key
@@ -569,7 +569,7 @@ def test_subclass_copy_and_fromkeys():
     class MyAliasDict(AliasDict):
         pass
 
-    ad = MyAliasDict({"a": 1, "b": 2}, aliases={"a": ["aa"]})
+    ad = MyAliasDict({"a": 1, "b": 2}, aliases={"a": "aa"})
 
     # copy() should return the subclass type
     copied = ad.copy()
@@ -577,6 +577,6 @@ def test_subclass_copy_and_fromkeys():
     assert copied["aa"] == 1
 
     # fromkeys() should return the subclass type
-    from_keys = MyAliasDict.fromkeys(["x", "y"], 0, aliases={"x": ["xx"]})
+    from_keys = MyAliasDict.fromkeys(["x", "y"], 0, aliases={"x": "xx"})
     assert type(from_keys) is MyAliasDict
     assert from_keys["xx"] == 0

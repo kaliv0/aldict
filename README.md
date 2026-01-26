@@ -17,9 +17,9 @@ Multi-key dictionary, supports adding and manipulating key-aliases pointing to s
 ## How to use
 
 - initialize with aliases
-<br>(one-liner with <i>aliases</i> dict mapping <i>key</i> to list of <i>aliases</i>)
+<br>(one-liner with <i>aliases</i> dict mapping <i>original key</i> to <i>alias keys</i>)
 ```python
-ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": ["bb"]})
+ad = AliasDict({"a": 1, "b": 2}, aliases={"a": ["aa", "aaa"], "b": "bb"})
 assert ad["a"] == ad["aa"] == ad["aaa"] == 1
 assert ad["b"] == ad["bb"] == 2
 ```
