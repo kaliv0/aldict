@@ -1,6 +1,6 @@
 ## Known Limitations
 
-### 1. No Alias-to-Alias Chaining
+### 1. No Alias-to-Alias Chaining (Probably not needed)
 
 Aliases can only point to origin keys, not to other aliases. There is no transitive resolution.
 
