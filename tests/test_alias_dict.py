@@ -61,18 +61,24 @@ def test_init_with_multiple_aliases_per_key():
 
 def test_init_with_aliases_validation():
     cases = [
-        (KeyError, None, {"a": 1}, {"nonexistent": ["aa"]}),
+        (KeyError, "nonexistent", {"a": 1}, {"nonexistent": ["aa"]}),
         (
             AliasValueError,
-            "Key and corresponding alias cannot be equal",
+            "Key and corresponding alias cannot be equal: 'a'",
             {"a": 1},
             {"a": ["a"]},
         ),
-        (AliasValueError, "already exists as a key", {"a": 1, "b": 2}, {"a": ["b"]}),
+        (
+            AliasValueError,
+            "Alias 'b' already exists as a key in the dictionary",
+            {"a": 1, "b": 2},
+            {"a": ["b"]},
+        ),
     ]
-    for exc, match, data, aliases in cases:
-        with pytest.raises(exc, match=match):
+    for exc, exc_msg, data, aliases in cases:
+        with pytest.raises(exc) as exc_info:
             AliasDict(data, aliases=aliases)
+        assert exc_info.value.args[0] == exc_msg
 
 
 def test_init_with_non_string_keys():
@@ -123,6 +129,21 @@ def test_add_alias(alias_dict):
     )
 
 
+def test_add_alias_already_assigned():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
+    with pytest.raises(AliasValueError) as exc_info:
+        ad.add_alias("b", "x", strict=True)
+    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
+
+
+def test_add_alias_already_assigned_with_strict_false():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
+    assert list(ad.items()) == [("a", 1), ("b", 2), ("x", 1)]
+
+    ad.add_alias("b", "x", strict=False)
+    assert list(ad.items()) == [("a", 1), ("b", 2), ("x", 2)]
+
+
 @pytest.mark.parametrize(
     "args",
     [
@@ -145,18 +166,17 @@ def test_add_multiple_aliases(alias_dict, args):
 
 
 def test_add_alias_raises(alias_dict):
-    with pytest.raises(
-        AliasValueError, match="Key and corresponding alias cannot be equal: '.toml'"
-    ):
+    with pytest.raises(AliasValueError) as exc_info:
         alias_dict.add_alias(".toml", ".toml")
+    assert exc_info.value.args[0] == "Key and corresponding alias cannot be equal: '.toml'"
 
 
 def test_add_alias_raises_if_alias_is_existing_key():
     ad = AliasDict({"a": 1, "b": 2})
-    with pytest.raises(
-        AliasValueError, match="Alias 'b' already exists as a key in the dictionary"
-    ):
+    with pytest.raises(AliasValueError) as exc_info:
         ad.add_alias("a", "b")
+
+    assert str(exc_info.value) == "Alias 'b' already exists as a key in the dictionary"
 
 
 def test_update_alias(alias_dict):
@@ -171,8 +191,9 @@ def test_update_alias(alias_dict):
 
 
 def test_update_alias_raises(alias_dict):
-    with pytest.raises(KeyError, match=".foo"):
+    with pytest.raises(KeyError) as exc_info:
         alias_dict.add_alias(".foo", ".bar")
+    assert exc_info.value.args[0] == ".foo"
 
 
 def test_remove_alias(alias_dict):
@@ -189,8 +210,9 @@ def test_remove_alias(alias_dict):
 
 def test_remove_alias_raises(alias_dict):
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
-    with pytest.raises(AliasError, match=".foo"):
+    with pytest.raises(AliasError) as exc_info:
         alias_dict.remove_alias(".foo")
+    assert exc_info.value.args[0] == "Alias '.foo' not found"
 
 
 @pytest.mark.parametrize(
@@ -227,6 +249,57 @@ def test_dictviews(alias_dict):
         (".toml", {"callable": "load", "import_mod": "tomli", "read_mode": "r"}),
         (".yml", {"callable": "safe_load", "import_mod": "yaml", "read_mode": "r"}),
     ]
+
+
+def test_dictviews_with_non_string_keys():
+    ad = AliasDict({1: "one", 2: "two"}, aliases={1: 3})
+    assert list(ad.keys()) == [1, 2, 3]
+    assert list(ad.items()) == [(1, "one"), (2, "two"), (3, "one")]
+
+
+def test_iterkeys(alias_dict):
+    it = alias_dict.iterkeys()
+    assert list(it) == [".json", ".yaml", ".toml", ".yml"]
+
+
+def test_iterkeys_is_lazy(alias_dict):
+    it = alias_dict.iterkeys()
+    assert next(it) == ".json"
+    assert next(it) == ".yaml"
+
+
+def test_iterkeys_reflects_mutations():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
+    keys = list(ad.iterkeys())
+    assert keys == ["a", "b", "x"]
+
+    ad.add_alias("b", "y")
+    assert list(ad.iterkeys()) == ["a", "b", "x", "y"]
+
+
+def test_iteritems(alias_dict):
+    it = alias_dict.iteritems()
+    result = list(it)
+    assert result == [
+        (".json", {"import_mod": "json", "callable": "load", "read_mode": "r"}),
+        (".yaml", {"import_mod": "yaml", "callable": "safe_load", "read_mode": "r"}),
+        (".toml", {"import_mod": "tomli", "callable": "load", "read_mode": "r"}),
+        (".yml", {"import_mod": "yaml", "callable": "safe_load", "read_mode": "r"}),
+    ]
+
+
+def test_iteritems_is_lazy(alias_dict):
+    it = alias_dict.iteritems()
+    assert next(it) == (".json", {"import_mod": "json", "callable": "load", "read_mode": "r"})
+    assert next(it) == (".yaml", {"import_mod": "yaml", "callable": "safe_load", "read_mode": "r"})
+
+
+def test_iteritems_reflects_mutations():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
+    assert list(ad.iteritems()) == [("a", 1), ("b", 2), ("x", 1)]
+
+    ad.add_alias("b", "y")
+    assert list(ad.iteritems()) == [("a", 1), ("b", 2), ("x", 1), ("y", 2)]
 
 
 def test_remove_key_and_aliases(alias_dict):
@@ -394,8 +467,9 @@ def test_update_with_alias_as_key():
 
 def test_aliasdict_is_unhashable():
     ad = AliasDict({"a": 1, "b": 2})
-    with pytest.raises(TypeError, match="unhashable type"):
+    with pytest.raises(TypeError) as exc_info:
         hash(ad)
+    assert exc_info.value.args[0] == "unhashable type: 'AliasDict'"
 
 
 def test_eq_with_non_aliasdict_returns_false():
@@ -580,3 +654,11 @@ def test_subclass_copy_and_fromkeys():
     from_keys = MyAliasDict.fromkeys(["x", "y"], 0, aliases={"x": "xx"})
     assert type(from_keys) is MyAliasDict
     assert from_keys["xx"] == 0
+
+
+def test_subclass_shows_correct_type():
+    class MyDict(AliasDict):
+        pass
+
+    result = {"a": 1} | MyDict({"b": 2})
+    assert result.__class__.__name__ == "MyDict"

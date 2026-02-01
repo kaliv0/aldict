@@ -20,8 +20,9 @@ class AliasDict(UserDict):
             for key, alias_list in aliases.items():
                 self.add_alias(key, alias_list)
 
-    def add_alias(self, key, *aliases):
-        """Add one or more aliases to a key. Accepts *args or a list/tuple."""
+    def add_alias(self, key, *aliases, strict=False):
+        """Add one or more aliases to a key. Accepts *args or a list/tuple.
+        If strict=True, raises AliasValueError when an alias is already assigned to a different key."""
         if key not in self.data:
             raise KeyError(key)
 
@@ -30,6 +31,9 @@ class AliasDict(UserDict):
                 raise AliasValueError(f"Key and corresponding alias cannot be equal: '{key}'")
             if alias in self.data:
                 raise AliasValueError(f"Alias '{alias}' already exists as a key in the dictionary")
+            if strict and (old_key := self._alias_dict.get(alias)) is not None and old_key != key:
+                raise AliasValueError(f"Alias '{alias}' already assigned to key '{old_key}'")
+
             self._alias_dict[alias] = key
 
     def remove_alias(self, *aliases):
@@ -87,8 +91,7 @@ class AliasDict(UserDict):
 
     def keys(self):
         """Return all keys and aliases."""
-        return dict(**self.data, **self._alias_dict).keys()
-        # NB: could be optimized as 'return iter(self)' but we won't be able to call e.g. len(alias_dict.keys())
+        return (self.data | self._alias_dict).keys()
 
     def values(self):
         """Return all values."""
@@ -96,10 +99,15 @@ class AliasDict(UserDict):
 
     def items(self):
         """Return all items (including alias/value pairs)."""
-        return dict(**self.data, **{k: self.data[v] for k, v in self._alias_dict.items()}).items()
-        # NB: could be optimized as
-        #   'return chain(self.data.items(), ((k, self.data[v]) for k, v in self._alias_dict.items()))'
-        # (same as .keys() above)
+        return (self.data | {k: self.data[v] for k, v in self._alias_dict.items()}).items()
+
+    def iterkeys(self):
+        """Return a lazy iterator over all keys and aliases."""
+        return iter(self)
+
+    def iteritems(self):
+        """Return a lazy iterator over all items (including alias/value pairs)."""
+        return chain(self.data.items(), ((k, self.data[v]) for k, v in self._alias_dict.items()))
 
     def origin_len(self):
         """Return count of original keys (without aliases)."""
@@ -164,7 +172,7 @@ class AliasDict(UserDict):
     def __ror__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
-        new = AliasDict(other)
+        new = type(self)(other)
         new.update(self.data)
         new._alias_dict.update(self._alias_dict)
         return new
