@@ -738,7 +738,7 @@ def test_pop_key_without_aliases():
 def test_reassign_alias_non_strict_updates_lookup_map():
     ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
     ad.add_alias("b", "x")  # reassign x from a to b
-    assert dict(ad._lookup_map) == {"a": {"x"}, "b": {"x"}}
+    assert dict(ad._lookup_map) == {"b": {"x"}}
     # _alias_map points to the latest key
     assert ad.origin_key("x") == "b"
 
