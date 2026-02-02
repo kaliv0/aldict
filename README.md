@@ -88,6 +88,19 @@ ad.items()
 # dict_values([10, 20])
 # dict_items([('x', 10), ('y', 20), ('Xx', 10), ('Yy', 20), ('xyz', 20)])
 ```
+- iterkeys
+<br>(lazy iterator over all <i>keys</i> and <i>aliases</i>)
+```python
+ad = AliasDict({"x": 10, "y": 20})
+ad.add_alias("x", "Xx")
+
+assert list(ad.iterkeys()) == ['x', 'y', 'Xx']
+```
+- iteritems
+<br>(lazy iterator over all <i>items</i> including <i>alias/value</i> pairs)
+```python
+assert list(ad.iteritems()) == [('x', 10), ('y', 20), ('Xx', 10)]
+```
 - remove key and aliases
 ```python
 ad.pop("y")
