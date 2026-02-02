@@ -14,7 +14,7 @@ class AliasDict(UserDict):
 
         if isinstance(dict_, AliasDict):
             super().__init__(dict_.data)
-            self._lookup_map = self._copy_lookup_map(dict_._lookup_map)
+            self._lookup_map = {k: v.copy() for k, v in dict_._lookup_map.items()}
             self._alias_map = dict_._alias_map.copy()
         else:
             super().__init__(dict_)
@@ -57,10 +57,6 @@ class AliasDict(UserDict):
             aliases_set.discard(alias)
             if not aliases_set:
                 del self._lookup_map[key]
-
-    @staticmethod
-    def _copy_lookup_map(source):
-        return {k: v.copy() for k, v in source.items()}
 
     @staticmethod
     def _unpack(args):
@@ -184,7 +180,8 @@ class AliasDict(UserDict):
             new.update(other.data)
             self._validate_merge_aliases(new, other)
             new._alias_map.update(other._alias_map)
-            new._lookup_map.update(self._copy_lookup_map(other._lookup_map))
+            for k, v in other._lookup_map.items():
+                new._lookup_map.setdefault(k, set()).update(v)
         else:
             new.update(other)
         return new
@@ -196,7 +193,8 @@ class AliasDict(UserDict):
         new.update(self.data)
         self._validate_merge_aliases(new, self)
         new._alias_map.update(self._alias_map)
-        new._lookup_map.update(self._copy_lookup_map(self._lookup_map))
+        for k, v in self._lookup_map.items():
+            new._lookup_map.setdefault(k, set()).update(v)
         return new
 
     def __ior__(self, other):
@@ -205,7 +203,7 @@ class AliasDict(UserDict):
             self.update(other.data)
             self._alias_map.update(other._alias_map)
             for k, v in other._lookup_map.items():
-                self._lookup_map[k] = v.copy()
+                self._lookup_map.setdefault(k, set()).update(v)
         else:
             self.update(other)
         return self
@@ -213,9 +211,11 @@ class AliasDict(UserDict):
     @staticmethod
     def _validate_merge_aliases(target, other):
         """Check that other's aliases don't collide with target's keys and vice versa."""
-        for alias in other._alias_map:  # noqa
+        for alias, key in other._alias_map.items():  # noqa
             if alias in target.data:
                 raise AliasValueError(f"Alias '{alias}' already exists as a key in the dictionary")
+            if (existing := target._alias_map.get(alias)) is not None and existing != key:  # noqa
+                raise AliasValueError(f"Alias '{alias}' already assigned to key '{existing}'")
         for key in other.data:
             if key in target._alias_map:  # noqa
                 raise AliasValueError(f"Key '{key}' already exists as an alias in the dictionary")

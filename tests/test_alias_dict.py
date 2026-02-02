@@ -832,3 +832,47 @@ def test_eq_same_aliases_different_grouping():
     ad1 = AliasDict({"a": 1, "b": 2}, aliases={"a": ["x", "y"]})
     ad2 = AliasDict({"a": 1, "b": 2}, aliases={"a": "x", "b": "y"})
     assert ad1 != ad2
+
+
+def test_or_merges_lookup_map_sets_for_shared_key():
+    ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
+    ad2 = AliasDict({"a": 2}, aliases={"a": "y"})
+    result = ad1 | ad2
+
+    assert result._lookup_map["a"] == {"x", "y"}
+    assert result._alias_map["x"] == result._alias_map["y"] == "a"
+    assert result.has_aliases("a")
+    assert dict(result.keys_with_aliases()) == {"a": {"x", "y"}}
+
+
+def test_ior_merges_lookup_map_sets_for_shared_key():
+    ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
+    ad2 = AliasDict({"a": 2}, aliases={"a": "y"})
+    ad1 |= ad2
+
+    assert ad1._lookup_map["a"] == {"x", "y"}
+    assert ad1._alias_map["x"] == ad1._alias_map["y"] == "a"
+
+
+def test_or_raises_when_same_alias_maps_to_different_keys():
+    ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
+    ad2 = AliasDict({"b": 2}, aliases={"b": "x"})
+    with pytest.raises(AliasValueError) as exc_info:
+        ad1 | ad2
+    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
+
+
+def test_ior_raises_when_same_alias_maps_to_different_keys():
+    ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
+    ad2 = AliasDict({"b": 2}, aliases={"b": "x"})
+    with pytest.raises(AliasValueError) as exc_info:
+        ad1 |= ad2
+    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
+
+
+def test_ror_raises_when_same_alias_maps_to_different_keys():
+    ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
+    ad2 = AliasDict({"b": 3}, aliases={"b": "x"})
+    with pytest.raises(AliasValueError) as exc_info:
+        ad2 | ad
+    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'b'"
