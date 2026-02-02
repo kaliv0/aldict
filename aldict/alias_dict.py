@@ -38,8 +38,9 @@ class AliasDict(UserDict):
             if (old_key := self._alias_map.get(alias)) is not None and old_key != key:
                 if strict:
                     raise AliasValueError(f"Alias '{alias}' already assigned to key '{old_key}'")
-                self._lookup_map[old_key].discard(alias)
-                if not self._lookup_map[old_key]:
+                aliases_set = self._lookup_map[old_key]
+                aliases_set.discard(alias)
+                if not aliases_set:
                     del self._lookup_map[old_key]
 
             self._lookup_map.setdefault(key, set()).add(alias)
