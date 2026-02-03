@@ -2,7 +2,17 @@ from collections import UserDict
 from collections.abc import Mapping
 from itertools import chain
 
-from aldict.exception import AliasError, AliasValueError
+
+class AliasError(KeyError):
+    """Key alias not found"""
+
+    pass
+
+
+class AliasValueError(ValueError):
+    """Inappropriate alias value"""
+
+    pass
 
 
 class AliasDict(UserDict):

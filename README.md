@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/kaliv0/aldict/blob/main/assets/alter-ego.jpg?raw=true" width="250" alt="Alter Ego">
+  <img src="https://github.com/kaliv0/aldict/blob/main/.github/assets/alter-ego.jpg?raw=true" width="250" alt="Alter Ego">
 </p>
 
 ---
