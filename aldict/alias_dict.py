@@ -159,7 +159,7 @@ class AliasDict(UserDict):
             for alias in self._lookup_map.pop(key, ()):
                 del self._alias_map[alias]
         except KeyError:
-            return self.remove_alias(key)
+            self.remove_alias(key)
 
     def __contains__(self, item):
         return item in self.data or item in self._alias_map
