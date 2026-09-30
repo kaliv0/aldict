@@ -6,7 +6,8 @@ help:
 	@echo "  format       uv run ruff check && uv run ruff format"
 	@echo "  test         uv run pytest"
 	@echo "  build        uv build"
-	@echo "  clean        remove ruff/mypy/pytest caches"
+	@echo "  publish      uvx uv-publish"
+	@echo "  clean        remove ruff/pytest caches"
 	@echo "  all          sync format test"
 
 sync:
@@ -25,6 +26,6 @@ publish: build
 	uvx uv-publish
 
 clean:
-	rm -rf .ruff_cache/ .mypy_cache/ .pytest_cache/
+	rm -rf .ruff_cache/ .pytest_cache/
 
 all: sync format test
