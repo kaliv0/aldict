@@ -209,17 +209,17 @@ class AliasDict(UserDict):
             )
         return self._merge_into(self, other)
 
-    def _merge_into(self, first, second):
-        if isinstance(second, AliasDict):
-            first._validate_merge_aliases(first, second)
+    def _merge_into(self, target, other):
+        if isinstance(other, AliasDict):
+            target._validate_merge_aliases(target, other)
 
-            first.update(second.data)
-            first._alias_map.update(second._alias_map)
-            for k, v in second._lookup_map.items():
-                first._lookup_map.setdefault(k, set()).update(v)
+            target.update(other.data)
+            target._alias_map.update(other._alias_map)
+            for k, v in other._lookup_map.items():
+                target._lookup_map.setdefault(k, set()).update(v)
         else:
-            first.update(second)
-        return first
+            target.update(other)
+        return target
 
     @staticmethod
     def _validate_merge_aliases(target, other):
