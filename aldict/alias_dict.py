@@ -8,6 +8,8 @@ KEY_ALIAS_CANNOT_BE_EQUAL = "Key and corresponding alias cannot be equal: '{key}
 ALIAS_ALREADY_ASSIGNED = "Alias '{alias}' already assigned to key '{key}'"
 ALIAS_NOT_FOUND = "Alias '{alias}' not found"
 
+UNSUPPORTED_OPERAND_TYPES = "Unsupported operand type(s) for |=: '{target}' and '{other}'"
+
 
 class AliasError(KeyError):
     """Key alias not found"""
@@ -192,42 +194,36 @@ class AliasDict(UserDict):
     def __or__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
-        new = self.copy()
-        if isinstance(other, AliasDict):
-            new.update(other.data)
-            self._validate_merge_aliases(new, other)
-            new._alias_map.update(other._alias_map)
-            for k, v in other._lookup_map.items():
-                new._lookup_map.setdefault(k, set()).update(v)
-        else:
-            new.update(other)
-        return new
+        return self._merge_into(self.copy(), other)
 
     def __ror__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
-        new = type(self)(other)
-        new.update(self.data)
-        self._validate_merge_aliases(new, self)
-        new._alias_map.update(self._alias_map)
-        for k, v in self._lookup_map.items():
-            new._lookup_map.setdefault(k, set()).update(v)
-        return new
+        # re-use __or__ on newly-created AliasDict from other
+        return type(self)(other) | self
 
     def __ior__(self, other):
-        if isinstance(other, AliasDict):
-            self._validate_merge_aliases(self, other)
-            self.update(other.data)
-            self._alias_map.update(other._alias_map)
-            for k, v in other._lookup_map.items():
-                self._lookup_map.setdefault(k, set()).update(v)
+        if not isinstance(other, Mapping):
+            raise TypeError(
+                UNSUPPORTED_OPERAND_TYPES.format(target=type(self).__name__, other=type(other).__name__)
+            )
+        return self._merge_into(self, other)
+
+    def _merge_into(self, first, second):
+        if isinstance(second, AliasDict):
+            first._validate_merge_aliases(first, second)
+
+            first.update(second.data)
+            first._alias_map.update(second._alias_map)
+            for k, v in second._lookup_map.items():
+                first._lookup_map.setdefault(k, set()).update(v)
         else:
-            self.update(other)
-        return self
+            first.update(second)
+        return first
 
     @staticmethod
     def _validate_merge_aliases(target, other):
-        """Check that other's aliases don't collide with target's keys and vice versa."""
+        # check that other's aliases don't collide with target's keys and vice versa
         for alias, key in other._alias_map.items():
             if alias in target.data:
                 raise AliasValueError(ALIAS_EXISTS_AS_KEY.format(alias=alias))
