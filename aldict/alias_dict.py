@@ -2,6 +2,14 @@ from collections import UserDict
 from collections.abc import Mapping
 from itertools import chain
 
+KEY_EXISTS_AS_ALIAS = "Key '{key}' already exists as an alias in the dictionary"
+ALIAS_EXISTS_AS_KEY = "Alias '{alias}' already exists as a key in the dictionary"
+KEY_ALIAS_CANNOT_BE_EQUAL = "Key and corresponding alias cannot be equal: '{key}'"
+ALIAS_ALREADY_ASSIGNED = "Alias '{alias}' already assigned to key '{key}'"
+ALIAS_NOT_FOUND = "Alias '{alias}' not found"
+
+UNSUPPORTED_OPERAND_TYPES = "Unsupported operand type(s) for |=: '{target}' and '{other}'"
+
 
 class AliasError(KeyError):
     """Key alias not found"""
@@ -41,17 +49,14 @@ class AliasDict(UserDict):
 
         for alias in self._unpack(aliases):
             if alias == key:
-                raise AliasValueError(f"Key and corresponding alias cannot be equal: '{key}'")
+                raise AliasValueError(KEY_ALIAS_CANNOT_BE_EQUAL.format(key=key))
             if alias in self.data:
-                raise AliasValueError(f"Alias '{alias}' already exists as a key in the dictionary")
+                raise AliasValueError(ALIAS_EXISTS_AS_KEY.format(alias=alias))
 
             if (old_key := self._alias_map.get(alias)) is not None and old_key != key:
                 if strict:
-                    raise AliasValueError(f"Alias '{alias}' already assigned to key '{old_key}'")
-                aliases_set = self._lookup_map[old_key]
-                aliases_set.discard(alias)
-                if not aliases_set:
-                    del self._lookup_map[old_key]
+                    raise AliasValueError(ALIAS_ALREADY_ASSIGNED.format(alias=alias, key=old_key))
+                self._remove_from_lookup_map(old_key, alias)
 
             self._lookup_map.setdefault(key, set()).add(alias)
             self._alias_map[alias] = key
@@ -62,12 +67,15 @@ class AliasDict(UserDict):
             try:
                 key = self._alias_map.pop(alias)
             except KeyError as e:
-                raise AliasError(f"Alias '{alias}' not found") from e
+                raise AliasError(ALIAS_NOT_FOUND.format(alias=alias)) from e
 
-            aliases_set = self._lookup_map[key]
-            aliases_set.discard(alias)
-            if not aliases_set:
-                del self._lookup_map[key]
+            self._remove_from_lookup_map(key, alias)
+
+    def _remove_from_lookup_map(self, key, alias):
+        aliases_set = self._lookup_map[key]
+        aliases_set.discard(alias)
+        if not aliases_set:
+            del self._lookup_map[key]
 
     @staticmethod
     def _unpack(args):
@@ -186,49 +194,44 @@ class AliasDict(UserDict):
     def __or__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
-        new = self.copy()
-        if isinstance(other, AliasDict):
-            new.update(other.data)
-            self._validate_merge_aliases(new, other)
-            new._alias_map.update(other._alias_map)
-            for k, v in other._lookup_map.items():
-                new._lookup_map.setdefault(k, set()).update(v)
-        else:
-            new.update(other)
-        return new
+        return self._merge_into(self.copy(), other)
 
     def __ror__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
-        new = type(self)(other)
-        new.update(self.data)
-        self._validate_merge_aliases(new, self)
-        new._alias_map.update(self._alias_map)
-        for k, v in self._lookup_map.items():
-            new._lookup_map.setdefault(k, set()).update(v)
-        return new
+        # re-use __or__ on newly-created AliasDict from other
+        return type(self)(other) | self
 
     def __ior__(self, other):
+        if not isinstance(other, Mapping):
+            raise TypeError(
+                UNSUPPORTED_OPERAND_TYPES.format(target=type(self).__name__, other=type(other).__name__)
+            )
+        return self._merge_into(self, other)
+
+    def _merge_into(self, target, other):
         if isinstance(other, AliasDict):
-            self._validate_merge_aliases(self, other)
-            self.update(other.data)
-            self._alias_map.update(other._alias_map)
+            target._validate_merge_aliases(target, other)
+
+            target.update(other.data)
+            target._alias_map.update(other._alias_map)
             for k, v in other._lookup_map.items():
-                self._lookup_map.setdefault(k, set()).update(v)
+                target._lookup_map.setdefault(k, set()).update(v)
         else:
-            self.update(other)
-        return self
+            target.update(other)
+        return target
 
     @staticmethod
     def _validate_merge_aliases(target, other):
-        """Check that other's aliases don't collide with target's keys and vice versa."""
-        for alias, key in other._alias_map.items():  # noqa
+        # check that other's aliases don't collide with target's keys and vice versa
+        for alias, key in other._alias_map.items():
             if alias in target.data:
-                raise AliasValueError(f"Alias '{alias}' already exists as a key in the dictionary")
-            if (existing := target._alias_map.get(alias)) is not None and existing != key:  # noqa
-                raise AliasValueError(f"Alias '{alias}' already assigned to key '{existing}'")
+                raise AliasValueError(ALIAS_EXISTS_AS_KEY.format(alias=alias))
+            if (existing := target._alias_map.get(alias)) is not None and existing != key:
+                raise AliasValueError(ALIAS_ALREADY_ASSIGNED.format(alias=alias, key=existing))
+
         for key in other.data:
-            if key in target._alias_map:  # noqa
-                raise AliasValueError(f"Key '{key}' already exists as an alias in the dictionary")
+            if key in target._alias_map:
+                raise AliasValueError(KEY_EXISTS_AS_ALIAS.format(key=key))
 
     __hash__ = None
