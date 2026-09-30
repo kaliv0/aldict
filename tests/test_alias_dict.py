@@ -3,7 +3,14 @@ import pickle
 
 import pytest
 
-from aldict import AliasDict, AliasValueError, AliasError
+from aldict import AliasDict, AliasError, AliasValueError
+from aldict.alias_dict import (
+    ALIAS_ALREADY_ASSIGNED,
+    ALIAS_EXISTS_AS_KEY,
+    ALIAS_NOT_FOUND,
+    KEY_ALIAS_CANNOT_BE_EQUAL,
+    KEY_EXISTS_AS_ALIAS,
+)
 
 
 def test_alias_map(alias_dict):
@@ -38,7 +45,7 @@ def test_init_from_aliasdict_preserves_aliases():
     assert ad2["a"] == ad2["aa"] == ad2["aaa"] == 1
     assert list(ad2.aliases()) == ["aa", "aaa"]
 
-    # Verify independence (data, aliases, and lookup_map)
+    # Verify independence (data, aliases and lookup_map)
     ad1["a"] = 999
     ad1.add_alias("b", "bb")
     assert ad2["a"] == 1
@@ -65,21 +72,20 @@ def test_init_with_aliases_validation():
         (KeyError, "nonexistent", {"a": 1}, {"nonexistent": ["aa"]}),
         (
             AliasValueError,
-            "Key and corresponding alias cannot be equal: 'a'",
+            KEY_ALIAS_CANNOT_BE_EQUAL.format(key="a"),
             {"a": 1},
             {"a": ["a"]},
         ),
         (
             AliasValueError,
-            "Alias 'b' already exists as a key in the dictionary",
+            ALIAS_EXISTS_AS_KEY.format(alias="b"),
             {"a": 1, "b": 2},
             {"a": ["b"]},
         ),
     ]
     for exc, exc_msg, data, aliases in cases:
-        with pytest.raises(exc) as exc_info:
+        with pytest.raises(exc, match=exc_msg):
             AliasDict(data, aliases=aliases)
-        assert exc_info.value.args[0] == exc_msg
 
 
 def test_init_with_non_string_keys():
@@ -102,23 +108,23 @@ def test_init_from_aliasdict_with_non_string_keys():
 
 
 def test_init_with_non_identifier_string_keys():
-    ad = AliasDict({"my-key": 1, "another.key": 2, "123": 3, "has spaces": 4})
-    assert ad["my-key"] == 1
-    assert ad["another.key"] == 2
+    ad = AliasDict({"my_key": 1, "other_key": 2, "123": 3, "has spaces": 4})
+    assert ad["my_key"] == 1
+    assert ad["other_key"] == 2
     assert ad["123"] == 3
     assert ad["has spaces"] == 4
 
-    ad.add_alias("my-key", "also-dashed")
-    assert ad["also-dashed"] == 1
+    ad.add_alias("my_key", "also_dashed")
+    assert ad["also_dashed"] == 1
 
 
 def test_init_from_aliasdict_with_non_identifier_string_keys():
-    ad1 = AliasDict({"my-key": 1, "123start": 2}, aliases={"my-key": "alt-key"})
+    ad1 = AliasDict({"my_key": 1, "123start": 2}, aliases={"my_key": "alt_key"})
     ad2 = AliasDict(ad1)
 
-    assert ad2["my-key"] == ad2["alt-key"] == 1
+    assert ad2["my_key"] == ad2["alt_key"] == 1
     assert ad2["123start"] == 2
-    assert list(ad2.aliases()) == ["alt-key"]
+    assert list(ad2.aliases()) == ["alt_key"]
 
 
 def test_add_alias(alias_dict):
@@ -132,9 +138,8 @@ def test_add_alias(alias_dict):
 
 def test_add_alias_already_assigned_in_strict_mode_raises():
     ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_ALREADY_ASSIGNED.format(alias="x", key="a")):
         ad.add_alias("b", "x", strict=True)
-    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
 
 
 def test_add_alias_already_assigned_with_strict_false():
@@ -167,17 +172,14 @@ def test_add_multiple_aliases(alias_dict, args):
 
 
 def test_add_alias_raises(alias_dict):
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=KEY_ALIAS_CANNOT_BE_EQUAL.format(key=".toml")):
         alias_dict.add_alias(".toml", ".toml")
-    assert exc_info.value.args[0] == "Key and corresponding alias cannot be equal: '.toml'"
 
 
 def test_add_alias_raises_if_alias_is_existing_key():
     ad = AliasDict({"a": 1, "b": 2})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_EXISTS_AS_KEY.format(alias="b")):
         ad.add_alias("a", "b")
-
-    assert str(exc_info.value) == "Alias 'b' already exists as a key in the dictionary"
 
 
 def test_update_alias(alias_dict):
@@ -192,9 +194,8 @@ def test_update_alias(alias_dict):
 
 
 def test_update_alias_raises(alias_dict):
-    with pytest.raises(KeyError) as exc_info:
+    with pytest.raises(KeyError, match=".foo"):
         alias_dict.add_alias(".foo", ".bar")
-    assert exc_info.value.args[0] == ".foo"
 
 
 def test_remove_alias(alias_dict):
@@ -211,9 +212,8 @@ def test_remove_alias(alias_dict):
 
 def test_remove_alias_raises(alias_dict):
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
-    with pytest.raises(AliasError) as exc_info:
+    with pytest.raises(AliasError, match=ALIAS_NOT_FOUND.format(alias=".foo")):
         alias_dict.remove_alias(".foo")
-    assert exc_info.value.args[0] == "Alias '.foo' not found"
 
 
 @pytest.mark.parametrize(
@@ -305,7 +305,9 @@ def test_iteritems_reflects_mutations():
 
 def test_remove_key_and_aliases(alias_dict):
     assert list(alias_dict.keys()) == [".json", ".yaml", ".toml", ".yml"]
+
     alias_dict.pop(".yaml")
+
     assert list(alias_dict.keys()) == [".json", ".toml"]
     assert dict(alias_dict._lookup_map) == {}
 
@@ -472,9 +474,8 @@ def test_update_with_alias_as_key():
 
 def test_aliasdict_is_unhashable():
     ad = AliasDict({"a": 1, "b": 2})
-    with pytest.raises(TypeError) as exc_info:
+    with pytest.raises(TypeError, match="unhashable type: 'AliasDict'"):
         hash(ad)
-    assert exc_info.value.args[0] == "unhashable type: 'AliasDict'"
 
 
 def test_eq_with_non_aliasdict_returns_false():
@@ -499,7 +500,7 @@ def test_copy():
     assert cp == ad
     assert cp is not ad
 
-    # Verify independence (data, aliases, and lookup_map)
+    # Verify independence (data, aliases and lookup_map)
     ad["a"] = 999
     assert cp["a"] == 1
 
@@ -785,47 +786,41 @@ def test_eq_different_lookup_maps():
 def test_or_raises_when_other_alias_collides_with_self_key():
     ad1 = AliasDict({"a": 1, "x": 2})
     ad2 = AliasDict({"b": 3}, aliases={"b": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_EXISTS_AS_KEY.format(alias="x")):
         ad1 | ad2
-    assert exc_info.value.args[0] == "Alias 'x' already exists as a key in the dictionary"
 
 
 def test_or_raises_when_other_key_collides_with_self_alias():
     ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
     ad2 = AliasDict({"x": 2})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=KEY_EXISTS_AS_ALIAS.format(key="x")):
         ad1 | ad2
-    assert exc_info.value.args[0] == "Key 'x' already exists as an alias in the dictionary"
 
 
 def test_ror_raises_when_alias_collides_with_key():
     ad = AliasDict({"b": 2}, aliases={"b": "a"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_EXISTS_AS_KEY.format(alias="a")):
         {"a": 1} | ad
-    assert exc_info.value.args[0] == "Alias 'a' already exists as a key in the dictionary"
 
 
 def test_ror_raises_when_other_key_collides_with_self_alias():
     ad = AliasDict({"a": 2}, aliases={"a": "y"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_EXISTS_AS_KEY.format(alias="y")):
         {"y": 1} | ad
-    assert exc_info.value.args[0] == "Alias 'y' already exists as a key in the dictionary"
 
 
 def test_ior_raises_when_other_alias_collides_with_self_key():
     ad1 = AliasDict({"a": 1, "x": 2})
     ad2 = AliasDict({"b": 3}, aliases={"b": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_EXISTS_AS_KEY.format(alias="x")):
         ad1 |= ad2
-    assert exc_info.value.args[0] == "Alias 'x' already exists as a key in the dictionary"
 
 
 def test_ior_raises_when_other_key_collides_with_self_alias():
     ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
     ad2 = AliasDict({"x": 2})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=KEY_EXISTS_AS_ALIAS.format(key="x")):
         ad1 |= ad2
-    assert exc_info.value.args[0] == "Key 'x' already exists as an alias in the dictionary"
 
 
 def test_eq_same_aliases_different_grouping():
@@ -857,22 +852,19 @@ def test_ior_merges_lookup_map_sets_for_shared_key():
 def test_or_raises_when_same_alias_maps_to_different_keys():
     ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
     ad2 = AliasDict({"b": 2}, aliases={"b": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_ALREADY_ASSIGNED.format(alias="x", key="a")):
         ad1 | ad2
-    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
 
 
 def test_ior_raises_when_same_alias_maps_to_different_keys():
     ad1 = AliasDict({"a": 1}, aliases={"a": "x"})
     ad2 = AliasDict({"b": 2}, aliases={"b": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_ALREADY_ASSIGNED.format(alias="x", key="a")):
         ad1 |= ad2
-    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'a'"
 
 
 def test_ror_raises_when_same_alias_maps_to_different_keys():
     ad = AliasDict({"a": 1, "b": 2}, aliases={"a": "x"})
     ad2 = AliasDict({"b": 3}, aliases={"b": "x"})
-    with pytest.raises(AliasValueError) as exc_info:
+    with pytest.raises(AliasValueError, match=ALIAS_ALREADY_ASSIGNED.format(alias="x", key="b")):
         ad2 | ad
-    assert exc_info.value.args[0] == "Alias 'x' already assigned to key 'b'"
