@@ -54,10 +54,7 @@ class AliasDict(UserDict):
             if (old_key := self._alias_map.get(alias)) is not None and old_key != key:
                 if strict:
                     raise AliasValueError(ALIAS_ALREADY_ASSIGNED.format(alias=alias, key=old_key))
-                aliases_set = self._lookup_map[old_key]
-                aliases_set.discard(alias)
-                if not aliases_set:
-                    del self._lookup_map[old_key]
+                self._remove_from_lookup_map(old_key, alias)
 
             self._lookup_map.setdefault(key, set()).add(alias)
             self._alias_map[alias] = key
@@ -70,10 +67,13 @@ class AliasDict(UserDict):
             except KeyError as e:
                 raise AliasError(ALIAS_NOT_FOUND.format(alias=alias)) from e
 
-            aliases_set = self._lookup_map[key]
-            aliases_set.discard(alias)
-            if not aliases_set:
-                del self._lookup_map[key]
+            self._remove_from_lookup_map(key, alias)
+
+    def _remove_from_lookup_map(self, key, alias):
+        aliases_set = self._lookup_map[key]
+        aliases_set.discard(alias)
+        if not aliases_set:
+            del self._lookup_map[key]
 
     @staticmethod
     def _unpack(args):
@@ -233,6 +233,7 @@ class AliasDict(UserDict):
                 raise AliasValueError(ALIAS_EXISTS_AS_KEY.format(alias=alias))
             if (existing := target._alias_map.get(alias)) is not None and existing != key:
                 raise AliasValueError(ALIAS_ALREADY_ASSIGNED.format(alias=alias, key=existing))
+
         for key in other.data:
             if key in target._alias_map:
                 raise AliasValueError(KEY_EXISTS_AS_ALIAS.format(key=key))
