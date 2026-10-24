@@ -26,6 +26,7 @@ publish: build
 	uvx uv-publish
 
 clean:
-	rm -rf .ruff_cache/ .pytest_cache/
+	rm -rf .ruff_cache/ .pytest_cache/ .pdm-build/ dist/ build/ *.egg-info/
+	find . -path ./.venv -prune -o -type d -name __pycache__ -exec rm -rf {} +
 
 all: sync format test
