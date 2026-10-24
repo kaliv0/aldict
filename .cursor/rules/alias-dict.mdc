@@ -1,0 +1,44 @@
+---
+description: AliasDict is a dict subclass — preserve alias semantics and avoid C-level bypass traps
+globs: aldict/**/*.py,tests/**/*.py
+alwaysApply: false
+---
+
+# AliasDict (dict subclass)
+
+Values live in the instance; `_alias_map` (alias→key) and `_lookup_map` (key→set(aliases)) are **attrs**, never entries. `_lookup_map` is derived from `_alias_map`.
+
+## Must keep
+
+- Resolve-first via inlined `_alias_map.get(key, key)` in get/set; no `UserDict` / `__missing__` / `_origin` helper.
+- Lazy custom `_AliasKeysView` / `_AliasItemsView` — do not rebuild with `dict | dict`, and do not swap in `collections.abc` views (slower iteration).
+- `popitem` = FIFO (`next(iter(self))`), not `dict.popitem` LIFO.
+- Override `get` / `pop` / `setdefault` / `update` / `__ne__` (C dict skips subclass hooks).
+- Pickle via `__reduce_ex__` + `(origins, alias_map)` state; rebuild `_lookup_map` on restore. Copy path copies both maps (do not rebuild lookup from alias_map on copy).
+
+## Origin-only access
+
+```python
+# ✅ origins only
+dict.__contains__(self, key)
+dict.items(self)
+dict.__len__(self)
+
+# ❌ includes aliases — wrong for add_alias / merge / copy / pickle
+key in self
+dict.copy(self)            # non-exact dict path walks keys()/__getitem__
+dict.update(dst, other_ad) # same — materializes aliases as real entries
+for k, v in other.items():  # when other is AliasDict
+```
+
+## Copy / merge
+
+Copy and `|` / `|=` must transfer **origins** with `dict.items(other)`, then copy `_alias_map` and `_lookup_map` (set copies). Iterating an `AliasDict` or calling `update(other_aliasdict)` without care materializes aliases as real keys (or, for `update`, writes origins repeatedly without transferring alias maps — use `|` / `_merge_into` to merge aliases).
+
+## Lookup tradeoff
+
+Resolve-first (`_alias_map.get(key, key)` inlined in hot paths): every get pays an alias_map probe. Faster alias hits; slightly slower origin hits than try-origin-first. Do not flip without re-benchmarking.
+
+## Errors
+
+Raise `KeyError(requested_key)` (not the origin). Keep `AliasError` / `AliasValueError` messages stable.
