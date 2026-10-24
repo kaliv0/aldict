@@ -16,28 +16,6 @@ Multi-key dictionary, supports adding and manipulating key-aliases pointing to s
 
 ---
 
-## Performance
-
-The current implementation subclasses `dict` (not `UserDict`), resolves aliases
-before lookup, and uses lazy `keys()` / `items()` views. Versus the previous
-design, typical wins on a 10k+10k map:
-
-| Hot path | vs pre-rewrite |
-|---|---|
-| alias get | ~2.5× faster |
-| `keys()` / `items()` construct | orders of magnitude faster (no merged temp dict) |
-| `list(keys())` | ~4× faster |
-
-Sample numbers, how to re-run, and the legacy baseline:
-[`docs/benchmarks.md`](docs/benchmarks.md). Design notes:
-[`docs/performance-tutorial.md`](docs/performance-tutorial.md).
-
-```bash
-make bench
-```
-
----
-
 ## How to use
 
 - initialize with aliases
