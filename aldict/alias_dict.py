@@ -10,6 +10,9 @@ ALIAS_NOT_FOUND = "Alias '{alias}' not found"
 UNSUPPORTED_OPERAND_TYPES = "Unsupported operand type(s) for |=: '{target}' and '{other}'"
 
 
+######################################
+
+
 class AliasError(KeyError):
     """Key alias not found"""
 
@@ -22,28 +25,27 @@ class AliasValueError(ValueError):
     pass
 
 
-# Custom views (not collections.abc.*): return iter(...) / dict.items — abc
-# KeysView uses yield-from and ItemsView re-resolves aliases via __getitem__.
+######################################
 
 
 class _AliasView:
-    __slots__ = ("_m",)
+    __slots__ = ("_mapping",)
 
     def __init__(self, mapping):
-        self._m = mapping
+        self._mapping = mapping
 
     def __len__(self):
-        return len(self._m)
+        return len(self._mapping)
 
 
 class _AliasKeysView(_AliasView):
     __slots__ = ()
 
     def __iter__(self):
-        return iter(self._m)
+        return iter(self._mapping)
 
     def __contains__(self, key):
-        return key in self._m
+        return key in self._mapping
 
     def __repr__(self):
         return f"alias_keys({list(self)!r})"
@@ -53,15 +55,17 @@ class _AliasItemsView(_AliasView):
     __slots__ = ()
 
     def __iter__(self):
-        m = self._m
-        return chain(dict.items(m), ((k, dict.__getitem__(m, v)) for k, v in m._alias_map.items()))
+        mapping = self._mapping
+        return chain(
+            dict.items(mapping), ((k, dict.__getitem__(mapping, v)) for k, v in mapping._alias_map.items())
+        )
 
     def __contains__(self, item):
         if not isinstance(item, tuple) or len(item) != 2:
             return False
         key, value = item
         try:
-            return self._m[key] == value
+            return self._mapping[key] == value
         except KeyError:
             return False
 
@@ -69,17 +73,18 @@ class _AliasItemsView(_AliasView):
         return f"alias_items({list(self)!r})"
 
 
+######################################
+
+
 class AliasDict(dict):
     """Dict with key-aliases pointing to shared values."""
 
     def __init__(self, data=None, /, aliases=None):
-        # Maps must exist before any __setitem__ (init update + pickle restore).
-        self._lookup_map = {}  # key -> set(aliases); derived from _alias_map
+        self._lookup_map = {}  # key -> set(aliases)
         self._alias_map = {}  # alias -> key
         dict.__init__(self)
 
         if isinstance(data, AliasDict):
-            # Origins only — dict.update(self, alias_dict) would materialize aliases.
             dict.update(self, dict.items(data))
             self._alias_map = data._alias_map.copy()
             self._lookup_map = {k: v.copy() for k, v in data._lookup_map.items()}
@@ -93,7 +98,6 @@ class AliasDict(dict):
     def add_alias(self, key, *aliases, strict=False):
         """Add one or more aliases to a key. Accepts *args or a list/tuple.
         If strict=True, raises AliasValueError when an alias is already assigned to a different key."""
-        # dict.__contains__: `key in self` is also True for existing aliases.
         if not dict.__contains__(self, key):
             raise KeyError(key)
 
@@ -179,7 +183,7 @@ class AliasDict(dict):
         """Return a view of all items (including alias/value pairs)."""
         return _AliasItemsView(self)
 
-    # values() inherited — origin values only (aliases share storage).
+    # values() inherited -> origin values only (aliases share storage)
 
     def iterkeys(self):
         """Return an iterator over all keys and aliases."""
@@ -223,8 +227,6 @@ class AliasDict(dict):
     def __reversed__(self):
         return chain(reversed(self._alias_map), dict.__reversed__(self))
 
-    # C dict.get/pop/setdefault/update bypass subclass hooks — keep aliases working.
-
     def get(self, key, default=None):
         return dict.get(self, self._alias_map.get(key, key), default)
 
@@ -246,7 +248,7 @@ class AliasDict(dict):
             return default
 
     def popitem(self):
-        # FIFO via __iter__ (origins then aliases); bare dict.popitem is LIFO.
+        # FIFO via __iter__ (origins then aliases) -> bare dict.popitem is LIFO
         try:
             key = next(iter(self))
         except StopIteration:
@@ -254,9 +256,8 @@ class AliasDict(dict):
         return key, self.pop(key)
 
     def update(self, other=(), /, **kwargs):
-        # Route through self[k]=v (C update skips __setitem__). AliasDict: origins
-        # only — items() would rewrite each origin once per alias.
         if isinstance(other, AliasDict):
+            # origins only via unbound C dict.items -> skip aliases
             items = dict.items(other)
         elif isinstance(other, Mapping):
             items = other.items()
@@ -273,16 +274,17 @@ class AliasDict(dict):
         """Return a shallow copy of the AliasDict."""
         return type(self)(self)
 
+    ### adjust for pickle ###
     def __reduce_ex__(self, protocol):
-        # Default dict pickling walks items() and would persist aliases as keys.
+        # default dict pickling walks items() and would persist aliases as keys
         return (self.__class__, (), self.__getstate__())
 
     def __getstate__(self):
-        # Origins + alias_map; _lookup_map rebuilt on restore (copy path copies both).
+        # origins + alias_map -> _lookup_map rebuilt on restore (copy path copies both)
         return (dict(dict.items(self)), self._alias_map.copy())
 
     def __setstate__(self, state):
-        # (data, alias_map) or legacy (data, alias_map, lookup_map).
+        # data, alias_map, lookup_map
         data, alias_map = state[0], state[1]
         self._alias_map = alias_map
         lookup = {}
@@ -291,13 +293,15 @@ class AliasDict(dict):
         self._lookup_map = lookup
         dict.update(self, data)
 
+    ##########################
+
     def __repr__(self):
         return f"AliasDict({dict(self.items())})"
 
     def __eq__(self, other):
         if not isinstance(other, AliasDict):
             return NotImplemented
-        # _lookup_map is derived from _alias_map
+        # _lookup_map is derived from _alias_map, so comparing it is redundant
         return dict.__eq__(self, other) and self._alias_map == other._alias_map
 
     def __ne__(self, other):
@@ -313,6 +317,7 @@ class AliasDict(dict):
     def __ror__(self, other):
         if not isinstance(other, Mapping):
             return NotImplemented
+        # re-use __or__ on newly-created AliasDict from other
         return type(self)(other) | self
 
     def __ior__(self, other):
@@ -334,6 +339,7 @@ class AliasDict(dict):
         return target
 
     def _validate_merge_aliases(self, other):
+        # check that other's aliases don't collide with target's keys and vice versa
         for alias, key in other._alias_map.items():
             if dict.__contains__(self, alias):
                 raise AliasValueError(ALIAS_EXISTS_AS_KEY.format(alias=alias))
