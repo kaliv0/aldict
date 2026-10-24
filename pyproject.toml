@@ -27,7 +27,7 @@ source = "file"
 path = "aldict/__init__.py"
 
 [tool.pdm.build]
-excludes = ["tests/"]
+excludes = ["tests/", "benchmarks/", "docs/"]
 
 [tool.ruff]
 fix = true
