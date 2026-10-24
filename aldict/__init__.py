@@ -8,5 +8,5 @@ from .alias_dict import (
     AliasValueError as AliasValueError,
 )
 
-__version__ = "1.3.0"
+__version__ = "2.0.0"
 __all__ = ["AliasDict", "AliasError", "AliasValueError"]
