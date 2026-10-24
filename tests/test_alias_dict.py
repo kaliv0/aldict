@@ -298,6 +298,39 @@ def test_iteritems_reflects_mutations(aldict):
     assert list(aldict.iteritems()) == [("a", 1), ("b", 2), ("aa", 1), ("y", 2)]
 
 
+def test_keys_view_is_lazy_and_reflects_mutations(aldict):
+    view = aldict.keys()
+    assert list(view) == ["a", "b", "aa"]
+    assert "aa" in view
+    assert "missing" not in view
+    assert len(view) == 3
+
+    aldict.add_alias("b", "y")
+    assert list(view) == ["a", "b", "aa", "y"]
+    assert len(view) == 4
+
+
+def test_items_view_is_lazy_and_reflects_mutations(aldict):
+    view = aldict.items()
+    assert list(view) == [("a", 1), ("b", 2), ("aa", 1)]
+    assert ("aa", 1) in view
+    assert ("aa", 99) not in view
+    assert len(view) == 3
+
+    aldict.add_alias("b", "y")
+    assert list(view) == [("a", 1), ("b", 2), ("aa", 1), ("y", 2)]
+
+
+def test_values_excludes_alias_duplicates(aldict):
+    assert list(aldict.values()) == [1, 2]
+    assert len(aldict.values()) == aldict.origin_len() == 2
+
+
+def test_is_dict_subclass():
+    assert issubclass(AliasDict, dict)
+    assert isinstance(AliasDict({"a": 1}), dict)
+
+
 def test_remove_key_and_aliases(ext_aldict):
     assert list(ext_aldict.keys()) == [".json", ".yaml", ".toml", ".yml"]
 
